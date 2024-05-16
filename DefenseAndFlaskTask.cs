@@ -199,6 +199,9 @@ namespace FollowBot
 
         private static void CastDefensiveSkill(DefensiveSkillsClass skillClass)
         {
+            var imunEffect = LokiPoe.Me.HasAura("grace_period"); 
+            if (imunEffect) return; // dont cast if have imun
+
             if (skillClass == null) return;
             var skills = LokiPoe.InGameState.SkillBarHud.Skills;
             if (skills == null) return;

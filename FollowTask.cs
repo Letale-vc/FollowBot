@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using DreamPoeBot.BotFramework;
 using DreamPoeBot.Common;
@@ -23,12 +24,14 @@ namespace FollowBot
         public string Author { get { return "NotYourFriend, origial code from Unknown"; } }
         public string Version { get { return "0.0.0.1"; } }
         private Vector2i _lastSeenMasterPosition;
+        private Stopwatch _leaderzoningSw;
 
         public void Start()
         {
             Log.InfoFormat("[{0}] Task Loaded.", Name);
             FollowBot.Leader = null;
             _lastSeenMasterPosition = Vector2i.Zero;
+            _leaderzoningSw = new Stopwatch();
         }
         public void Stop()
         {
@@ -72,7 +75,7 @@ namespace FollowBot
 
             if (ExilePather.PathExistsBetween(mypos, ExilePather.FastWalkablePositionFor(leaderPos)))
                 _lastSeenMasterPosition = leaderPos;
-
+            
             if (distance > FollowBotSettings.Instance.MaxFollowDistance || (leader?.HasCurrentAction == true && leader?.CurrentAction?.Skill?.InternalId == "Move")  )
             {
                 var pos = ExilePather.FastWalkablePositionFor(mypos.GetPointAtDistanceBeforeEnd(
@@ -82,8 +85,18 @@ namespace FollowBot
                 if (pos == Vector2i.Zero || !ExilePather.PathExistsBetween(mypos, pos))
                 {
                     KeyManager.ClearAllKeyStates();
-
-                    //First check for Delve portals:
+                    // First check for Grace period, that mean we have just zoned, and the leader position might be incorrect.
+                    if (LokiPoe.Me.HasAura("Grace Period"))
+                    {
+                        if (!_leaderzoningSw.IsRunning)
+                        {
+                            Log.DebugFormat($"Grace period detected, this mean we just zoned and are waiting for the leader to finish loading.");
+                            _leaderzoningSw.Start();
+                        }
+                        if (_leaderzoningSw.IsRunning && _leaderzoningSw.ElapsedMilliseconds < 10000)
+                            return true;
+                    }
+                    //Then check for Delve portals:
                     var delveportal = LokiPoe.ObjectManager.GetObjectsByType<AreaTransition>().FirstOrDefault(x => x.Name == "Azurite Mine" && x.Metadata == "Metadata/MiscellaneousObject/PortalTransition");
                     if (delveportal != null)
                     {
@@ -222,6 +235,10 @@ namespace FollowBot
 
         public MessageResult Message(Message message)
         {
+            if (message.Id == Events.Messages.AreaChanged)
+            {
+                _leaderzoningSw.Reset();
+            }
             return MessageResult.Unprocessed;
         }
     }
