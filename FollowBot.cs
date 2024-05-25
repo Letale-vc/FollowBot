@@ -1,8 +1,4 @@
-﻿using System.Linq;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using DreamPoeBot.Loki.Bot;
+﻿using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Bot.Pathfinding;
 using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Coroutine;
@@ -15,10 +11,13 @@ using FollowBot.SimpleEXtensions;
 using FollowBot.SimpleEXtensions.CommonTasks;
 using FollowBot.SimpleEXtensions.Global;
 using log4net;
-
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using Message = DreamPoeBot.Loki.Bot.Message;
 using UserControl = System.Windows.Controls.UserControl;
-using System.Windows.Forms;
 
 namespace FollowBot
 {
@@ -373,6 +372,7 @@ namespace FollowBot
         {
 
             _taskManager.Add(new ClearCursorTask());
+            _taskManager.Add(new TradeTask());
             _taskManager.Add(new DefenseAndFlaskTask());
             _taskManager.Add(new LootItemTask());
             _taskManager.Add(new PreCombatFollowTask());
@@ -386,8 +386,8 @@ namespace FollowBot
             _taskManager.Add(new OpenWaypointTask());
             _taskManager.Add(new JoinPartyTask());
             _taskManager.Add(new FallbackTask());
-        }        
-        
+        }
+
         private static ExplorationSettings MapBotExploration()
         {
             if (!World.CurrentArea.IsMap)
@@ -448,7 +448,7 @@ namespace FollowBot
         public string Name => "FollowBot";
         public string Author => "NotYourFriend, origial code from Unknown";
         public string Description => "Bot that follow leader.";
-        public string Version => "0.0.6.7";
+        public string Version => "0.0.6.8";
         public UserControl Control => _gui ?? (_gui = new FollowBotGui());
         public JsonSettings Settings => FollowBotSettings.Instance;
         public override string ToString() => $"{Name}: {Description}";

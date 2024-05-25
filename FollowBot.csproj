@@ -132,6 +132,7 @@
     <Compile Include="SimpleEXtensions\Tgt.cs" />
     <Compile Include="SimpleEXtensions\Wait.cs" />
     <Compile Include="SimpleEXtensions\World.cs" />
+    <Compile Include="TradeTask.cs" />
     <Compile Include="TravelToPartyZoneTask.cs" />
   </ItemGroup>
   <ItemGroup>

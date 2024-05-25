@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
-using DreamPoeBot.Loki.Bot;
+﻿using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.Objects;
 using log4net;
+using System;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 
 namespace FollowBot
 {
@@ -121,7 +121,7 @@ namespace FollowBot
                     }
                 }
             }
-            
+
             // Just wait 5-10s between checks.
             _levelWait.Reset(TimeSpan.FromMilliseconds(LokiPoe.Random.Next(5000, 10000)));
 
