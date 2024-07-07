@@ -36,6 +36,12 @@ namespace FollowBot.SimpleEXtensions.CommonTasks
             List<CachedWorldItem> items = CombatAreaCache.Current.Items;
             List<CachedWorldItem> validItems = new List<CachedWorldItem>();
             var allItems = items.FindAll(i => !i.Ignored && !i.Unwalkable);
+
+            if (FollowBotSettings.Instance.ShouldLootOnlyQuestItem)
+            {
+                allItems = allItems.FindAll(i => i.Rarity == Rarity.Quest);
+            }
+
             if (allItems.Count == 0)
             {
                 return false;
@@ -44,9 +50,13 @@ namespace FollowBot.SimpleEXtensions.CommonTasks
             var refPos = FollowBot.Leader != null ? FollowBot.Leader.Position : LokiPoe.Me.Position;
 
             validItems = allItems.FindAll(i => i.Position.AsVector.Distance(refPos) <= FollowBotSettings.Instance.MaxLootDistance);
+
+            if (FollowBotSettings.Instance.ShouldLootOnlyQuestItem)
+            {
+                validItems = validItems.FindAll(i => i.Rarity == Rarity.Quest);
+            }
+
             var itToFarCount = allItems.Count - validItems.Count;
-
-
 
             if (validItems.Count == 0)
             {
