@@ -341,3 +341,6 @@ Default/EXtensions/World.cs
 Default/ToolsPlugin/Class/ChatWrapper.cs
 Default/ToolsPlugin/Pricer/Pricer.cs
 DreamPoeBot.Default.sln
+FollowBotGui.baml
+FollowBotGui.g.cs
+3rdparty.json

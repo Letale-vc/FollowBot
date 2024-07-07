@@ -46,6 +46,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <Grid.ColumnDefinitions>
@@ -55,68 +56,72 @@
                             </Grid.ColumnDefinitions>
 
                             <CheckBox Grid.Row="0"
-                                      Grid.Column="0"
-                                      Content="Kill Monsters"
-                                      Margin="10,0,10,0"
-                                      IsChecked="{Binding Path=ShouldKill, Mode=TwoWay}"
-                                      VerticalAlignment="Center"
-                                      ToolTip="Should the Follower use the Routine configured skills to fight?"/>
+                                    Grid.Column="0"
+                                    Content="Kill Monsters"
+                                    Margin="10,0,10,0"
+                                    IsChecked="{Binding Path=ShouldKill, Mode=TwoWay}"
+                                    VerticalAlignment="Center"
+                                    ToolTip="Should the Follower use the Routine configured skills to fight?"/>
                             <Label Grid.Row="0"
-                                   Grid.Column="1"
-                                   Content="Max combat Distance:"
-                                   VerticalAlignment="Center"/>
+                                    Grid.Column="1"
+                                    Content="Max combat Distance:"
+                                    VerticalAlignment="Center"/>
                             <TextBox Grid.Row="0"
-                                     Grid.Column="2"
-                                     Text="{Binding Path=MaxCombatDistance, Mode=TwoWay}"
-                                     MinWidth="25"
-                                     MaxWidth="50"
-                                     VerticalAlignment="Center"
-                                     ToolTip="Max distance from the leader, the follower will consider a mob targhetable and so try to fight."/>
+                                    Grid.Column="2"
+                                    Text="{Binding Path=MaxCombatDistance, Mode=TwoWay}"
+                                    MinWidth="25"
+                                    MaxWidth="50"
+                                    VerticalAlignment="Center"
+                                    ToolTip="Max distance from the leader, the follower will consider a mob targhetable and so try to fight."/>
 
                             <CheckBox Grid.Row="1"
-                                      Grid.Column="0"
-                                      Content="Loot Visible Items"
-                                      Margin="10,0,10,0"
-                                      IsChecked="{Binding Path=ShouldLoot, Mode=TwoWay}"
-                                      VerticalAlignment="Center"
-                                      ToolTip="Should the Follower try to loot ALL visible items? PLS NOTE: you nee to use a ingame item filter to reduce the quantity of visible items."/>
+                                    Grid.Column="0"
+                                    Content="Loot Visible Items"
+                                    Margin="10,0,10,0"
+                                    IsChecked="{Binding Path=ShouldLoot, Mode=TwoWay}"
+                                    VerticalAlignment="Center"
+                                    ToolTip="Should the Follower try to loot ALL visible items? PLS NOTE: you nee to use a ingame item filter to reduce the quantity of visible items."/>
                             <Label Grid.Row="1"
-                                   Grid.Column="1"
-                                   Content="Max loot Distance:"
-                                   VerticalAlignment="Center"/>
+                                    Grid.Column="1"
+                                    Content="Max loot Distance:"
+                                    VerticalAlignment="Center"/>
                             <TextBox Grid.Row="1"
-                                     Grid.Column="2"
-                                     Text="{Binding Path=MaxLootDistance, Mode=TwoWay}"
-                                     MinWidth="25"
-                                     MaxWidth="50"
-                                     VerticalAlignment="Center"
-                                     ToolTip="Max distance from the leader, the follower is allowed to move to loot items. All Items above this distance, will be logged and ignored."/>
-                            <CheckBox Grid.Row="1"
-                                      Grid.Column="0"
-                                      Content="Loot only quest items"
-                                      Margin="10,0,10,0"
-                                      IsChecked="{Binding Path=ShouldLootOnlyQuestItem, Mode=TwoWay}"
-                                      VerticalAlignment="Center"
-                                      ToolTip="Work if enable Loot visible item."/>
-                            <CheckBox Grid.Row="2"
-                                      Grid.Column="0"
-                                      Content="Use Stalker Sentinel"
-                                      Margin="10,0,10,0"
-                                      IsChecked="{Binding Path=UseStalkerSentinel, Mode=TwoWay}"
-                                      VerticalAlignment="Center"
-                                      ToolTip="Use the Stalker Sentinel if equipped and have charged."/>
-                            <CheckBox Grid.Row="3"
+                                    Grid.Column="2"
+                                    Text="{Binding Path=MaxLootDistance, Mode=TwoWay}"
+                                    MinWidth="25"
+                                    MaxWidth="50"
+                                    VerticalAlignment="Center"
+                                    ToolTip="Max distance from the leader, the follower is allowed to move to loot items. All Items above this distance, will be logged and ignored."/>
+
+                            <CheckBox
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Margin="10,0,10,0"
+                                Content="Loot only quest items"
+                                IsChecked="{Binding Path=ShouldLootOnlyQuestItem, Mode=TwoWay}"
+                                VerticalAlignment="Center"
+                                ToolTip="Work if enable Loot visible item."/>
+                            <CheckBox
+                                Grid.Row="3"
+                                Grid.Column="0"
+                                Margin="10,0,10,0"
+                                Content="Use Stalker Sentinel"
+                                IsChecked="{Binding Path=UseStalkerSentinel, Mode=TwoWay}"
+                                VerticalAlignment="Center"
+                                ToolTip="Use the Stalker Sentinel if equipped and have charged."/>
+                            <CheckBox Grid.Row="4"
                                       Grid.Column="0"
                                       Content="Don't Port Out of Map"
                                       Margin="10,0,10,0"
                                       IsChecked="{Binding Path=DontPortOutofMap, Mode=TwoWay}"
                                       VerticalAlignment="Center"
-                                      ToolTip="If Enabled, the follower will not try to exit a map if the Leader die or leave the area, you will need to use chat command to leave the area."/>
-                            <WrapPanel Grid.Row="4"
-                                       Grid.Column="0"
-                                       Grid.ColumnSpan="3">
+                                      ToolTip="If Enabled, the follower will not try to exit a map if the Leader die or leave the area, you will need to use chat command to leave the area."
+                                    Grid.ColumnSpan="3"/>
+                            <WrapPanel Grid.Row="5"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="3">
                                 <Label Content="Teleport Out delay: "
-                                       ToolTip="If the Leader Leave the zone for some reason, the bot will wait this numbr of seconds before to leave the map."/>
+                                        ToolTip="If the Leader Leave the zone for some reason, the bot will wait this numbr of seconds before to leave the map."/>
                                 <Slider Name="SlPortOutDelay"
                                         Minimum="0"
                                         Margin="0,5,0,0"
@@ -131,14 +136,14 @@
                                         VerticalAlignment="Center"
                                         ToolTip="If the Leader Leave the zone for some reason, the bot will wait this numbr of seconds before to leave the map."/>
                                 <TextBox Name="TbPortOutDelay"
-                                         Text="{Binding ElementName=SlPortOutDelay, Path=Value}"
-                                         Width="40"
-                                         HorizontalAlignment="Left"
-                                         Margin="0,5,0,0"
-                                         VerticalAlignment="Center"
-                                         ToolTip="If the Leader Leave the zone for some reason, the bot will wait this numbr of seconds before to leave the map."/>
+                                        Text="{Binding ElementName=SlPortOutDelay, Path=Value}"
+                                        Width="40"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,5,0,0"
+                                        VerticalAlignment="Center"
+                                        ToolTip="If the Leader Leave the zone for some reason, the bot will wait this numbr of seconds before to leave the map."/>
                                 <Label Content="Seconds."
-                                       ToolTip="If the Leader Leave the zone for some reason, the bot will wait this numbr of seconds before to leave the map."/>
+                                        ToolTip="If the Leader Leave the zone for some reason, the bot will wait this numbr of seconds before to leave the map."/>
                             </WrapPanel>
 
                         </Grid>

@@ -104,7 +104,7 @@ namespace FollowBot
                     _temporaryBlacklistedAuras.Add(id);
                 }
             }
-            
+
             await Wait.SleepSafe(100);
         }
 
@@ -158,7 +158,7 @@ namespace FollowBot
                 return SkillBar.Skills.Where(skill => !skill.IsVaalSkill &&
                     _temporaryBlacklistedAuras.All(x => x != skill.Id) &&
                 !SkillBlacklist.IsBlacklisted(skill) &&
-                (AuraNames.Contains(skill.Name) || AuraInternalId.Contains(skill.InternalId) || skill.IsAurifiedCurse || 
+                (AuraNames.Contains(skill.Name) || AuraInternalId.Contains(skill.InternalId) || skill.IsAurifiedCurse ||
                  (FollowBotSettings.Instance.EnableAspectsOfTheAvian && skill.Name == "Aspect of the Avian") ||
                  (FollowBotSettings.Instance.EnableAspectsOfTheCat && skill.Name == "Aspect of the Cat") ||
                  (FollowBotSettings.Instance.EnableAspectsOfTheCrab && skill.Name == "Aspect of the Crab") ||
@@ -185,7 +185,7 @@ namespace FollowBot
         }
         private static bool PlayerHasAura(string auraName)
         {
-            return LokiPoe.Me.Auras.Any(a => (a.Name.EqualsIgnorecase(auraName) || a.Name.EqualsIgnorecase(auraName + " aura")) && a.CasterId == LokiPoe.Me.Id);            
+            return LokiPoe.Me.Auras.Any(a => (a.Name.EqualsIgnorecase(auraName) || a.Name.EqualsIgnorecase(auraName + " aura")) && a.CasterId == LokiPoe.Me.Id);
         }
         private static bool PlayerHasAura(int skillId)
         {
@@ -213,7 +213,7 @@ namespace FollowBot
             "Purity of Lightning",
             "Vitality",
             "Wrath",
-		    "Defiance Banner",
+            "Defiance Banner",
             "Zealotry",
 
             // heralds
@@ -224,6 +224,7 @@ namespace FollowBot
             "Herald of Purity",
 
             // the rest
+            "Spellslinger",
             "Arctic Armour",
             "Flesh and Stone",
             "Envy",
@@ -268,6 +269,7 @@ namespace FollowBot
             "herald_of_light",//Herald of Purity
 
             // the rest
+            "spellslinger",
             "new_arctic_armour",
             "tempest_shield",
             "skitterbots",

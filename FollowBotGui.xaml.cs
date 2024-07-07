@@ -78,5 +78,10 @@ namespace FollowBot
 			else
                 FollowBotSettings.Instance.BloorOrSand = FollowBotSettings.BloodAndSand.Blood;
 		}
+
+        private void CheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }
