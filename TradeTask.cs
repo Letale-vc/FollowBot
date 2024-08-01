@@ -155,7 +155,7 @@ namespace FollowBot
                 var anyVis = LokiPoe.InGameState.NotificationHud.NotificationList.Any(x => x.IsVisible);
                 if (anyVis)
                 {
-                    await Wait.Sleep(500);
+                    return false;
                 }
                 var ret = LokiPoe.InGameState.NotificationHud.HandleNotificationEx(isTradeRequestToBeAccepted);
                 FollowBot.Log.WarnFormat($"[HandleTradeRequest] Result: {ret}");
