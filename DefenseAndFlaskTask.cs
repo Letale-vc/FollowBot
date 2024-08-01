@@ -139,9 +139,10 @@ namespace FollowBot
             if (LokiPoe.CurrentWorldArea.IsTown) return false;
             if (LokiPoe.CurrentWorldArea.Id == "HeistHub") return false;
             if (!LokiPoe.CurrentWorldArea.IsCombatArea) return false;
-            
-            if(LokiPoe.Me.HasAura("Grace Period"))
+
+            if (LokiPoe.Me.HasAura("Grace Period"))
             {
+                return false;
                 //await PlayerAction.MoveAway(15, 20);
             }
 
@@ -167,7 +168,7 @@ namespace FollowBot
                     if (UseFlask(thisflask, flask.Slot))
                     {
                         flask.PostUseDelay.Restart();
-                        return true;                        
+                        return true;
                     }
                 }
             }
@@ -199,8 +200,7 @@ namespace FollowBot
 
         private static void CastDefensiveSkill(DefensiveSkillsClass skillClass)
         {
-            var imunEffect = LokiPoe.Me.HasAura("grace_period"); 
-            if (imunEffect) return; // dont cast if have imun
+
 
             if (skillClass == null) return;
             var skills = LokiPoe.InGameState.SkillBarHud.Skills;
@@ -253,7 +253,7 @@ namespace FollowBot
             else
             {
                 var listSplit = linkWhitelist.Split(',');
-                if (listSplit.Length < 1) 
+                if (listSplit.Length < 1)
                 {
                     GlobalLog.Error("--------------------------------------------------------------------------------------------------------------------------------");
                     GlobalLog.Error(" ");
@@ -275,20 +275,20 @@ namespace FollowBot
                 {
                     var name = partyMember?.PlayerEntry?.Name;
                     if (string.IsNullOrEmpty(name)) continue;
-                    if (!LokiPoe.InGameState.PartyHud.IsInSameZone(name)) continue;                   
+                    if (!LokiPoe.InGameState.PartyHud.IsInSameZone(name)) continue;
                     if (!LinkRotationDictionary.ContainsKey(name))
                     {
                         LinkRotationDictionary.Add(name, 0);
-                    }                  
+                    }
                 }
                 var nam = "";
                 int weight = int.MaxValue;
                 var keys = LinkRotationDictionary.Keys;
                 foreach (var key in keys)
                 {
-                    if (LinkRotationDictionary[key] < weight) 
-                    { 
-                        weight = LinkRotationDictionary[key]; 
+                    if (LinkRotationDictionary[key] < weight)
+                    {
+                        weight = LinkRotationDictionary[key];
                         nam = key;
                     }
                 }
