@@ -142,6 +142,7 @@ namespace FollowBot
 
             if (LokiPoe.Me.HasAura("Grace Period"))
             {
+                GlobalLog.Debug("[DefenseAndFlaskTask] Find grace period, wait player moves.");
                 return false;
                 //await PlayerAction.MoveAway(15, 20);
             }

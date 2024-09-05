@@ -27,7 +27,7 @@ namespace FollowBot
         public string Description { get { return "This task will travel to party grind zone."; } }
         public string Author { get { return "NotYourFriend original from Unknown"; } }
         public string Version { get { return "0.0.0.1"; } }
-        
+
         public void Start()
         {
             PortOutStopwatch.Reset();
@@ -48,7 +48,7 @@ namespace FollowBot
             }
 
             await Coroutines.CloseBlockingWindows();
-            
+
             var leader = LokiPoe.InstanceInfo.PartyMembers.FirstOrDefault(x => x.MemberStatus == PartyStatus.PartyLeader);
             if (leader == null) return false;
             var leaderPlayerEntry = leader.PlayerEntry;
@@ -87,7 +87,7 @@ namespace FollowBot
                         GlobalLog.Warn($"IsInSameZone returned false for {leadername} retry [{_zoneCheckRetry}/3]");
                         return true;
                     }
-                }                
+                }
             }
             //First check the DontPortOutofMap
             var curZone = World.CurrentArea;
@@ -146,7 +146,7 @@ namespace FollowBot
             }
 
             if (leaderArea.IsMap || leaderArea.IsTempleOfAtzoatl || leaderArea.Id.Contains("Expedition"))
-            {                
+            {
                 if (!await TakePortal())
                     await Coroutines.ReactionWait();
                 return true;
@@ -248,7 +248,21 @@ namespace FollowBot
             await Coroutines.LatencyWait();
             return true;
         }
+        private async Task<bool> GoToPartyLeaderZone()
+        {
+            var zoneTransition = LokiPoe.ObjectManager.GetObjectsByType<AreaTransition>().OrderBy(x => x.Distance).FirstOrDefault(x => ExilePather.PathExistsBetween(LokiPoe.Me.Position, ExilePather.FastWalkablePositionFor(x.Position, 20)));
+            if (zoneTransition != null)
+            {
+                if (zoneTransition.Position.Distance(LokiPoe.Me.Position) > 18)
+                    await Move.AtOnce(zoneTransition.Position, "Move to Move to leader zone");
+                if (await Coroutines.InteractWith<AreaTransition>(zoneTransition))
+                    return true;
+                else
+                    return false;
 
+            }
+            return false;
+        }
         private async Task<bool> TakePortal()
         {
             var portal = LokiPoe.ObjectManager.GetObjectsByType<Portal>().FirstOrDefault(x => x.IsTargetable);
@@ -263,6 +277,11 @@ namespace FollowBot
             }
             else
             {
+                if (await GoToPartyLeaderZone())
+                {
+                    await Coroutines.ReactionWait();
+                    return true;
+                }
                 Log.DebugFormat("[{0}] Failed to find portals.", Name);
                 return false;
             }

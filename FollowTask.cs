@@ -1,7 +1,4 @@
-﻿using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using DreamPoeBot.BotFramework;
+﻿using DreamPoeBot.BotFramework;
 using DreamPoeBot.Common;
 using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Bot.Pathfinding;
@@ -10,6 +7,9 @@ using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.Objects;
 using FollowBot.SimpleEXtensions;
 using log4net;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using static DreamPoeBot.Loki.Game.LokiPoe;
 
 
@@ -39,7 +39,7 @@ namespace FollowBot
         }
         public void Tick()
         {
-            
+
         }
 
         public async Task<bool> Run()
@@ -54,7 +54,7 @@ namespace FollowBot
                 ProcessHookManager.SetKeyState(FollowBot.LastBoundMoveSkillKey, 0);
                 return false;
             }
-            
+
             if (FollowBot.Leader == null)
             {
                 ProcessHookManager.SetKeyState(FollowBot.LastBoundMoveSkillKey, 0);
@@ -75,9 +75,11 @@ namespace FollowBot
 
             if (ExilePather.PathExistsBetween(mypos, ExilePather.FastWalkablePositionFor(leaderPos)))
                 _lastSeenMasterPosition = leaderPos;
-            
-            if (distance > FollowBotSettings.Instance.MaxFollowDistance || (leader?.HasCurrentAction == true && leader?.CurrentAction?.Skill?.InternalId == "Move")  )
+
+
+            if (distance > FollowBotSettings.Instance.MaxFollowDistance || (leader?.HasCurrentAction == true && leader?.CurrentAction?.Skill?.InternalId == "Move"))
             {
+
                 var pos = ExilePather.FastWalkablePositionFor(mypos.GetPointAtDistanceBeforeEnd(
                     leaderPos,
                     LokiPoe.Random.Next(FollowBotSettings.Instance.FollowDistance,
@@ -111,8 +113,8 @@ namespace FollowBot
                             FollowBot.PhaseRun();
 
                             if (Move.Towards(walkablePosition, "moving to delve portal"))
-                                goto RepeatBehavior1;                            
-                             return true;
+                                goto RepeatBehavior1;
+                            return true;
                         }
 
                         var tele = await Coroutines.InteractWith(delveportal);
@@ -158,7 +160,7 @@ namespace FollowBot
                     }
 
                     Log.DebugFormat("[{0}] Found walkable Area Transition [{1}].", Name, areatransition.Name);
-                    RepeatBehavior:
+
                     if (LokiPoe.Me.Position.Distance(areatransition.Position) > 20)
                     {
                         if (LokiPoe.Me.IsDead) { return true; }
@@ -166,9 +168,9 @@ namespace FollowBot
 
                         // Cast Phase run if we have it.
                         FollowBot.PhaseRun();
-                        
-                        if (Move.Towards(walkablePosition, "area transition"))
-                            goto RepeatBehavior;
+
+                        Move.Towards(walkablePosition, "moving to area transition");
+
                         return true;
                     }
                     var trans = await PlayerAction.TakeTransition(areatransition);
@@ -224,7 +226,7 @@ namespace FollowBot
                 areatransition =
                     LokiPoe.ObjectManager.GetObjectsByType<AreaTransition>()
                         .FirstOrDefault(x => x.Name == "Doedre's Despair" && x.Distance < 140);
-            }            
+            }
             return areatransition;
         }
 

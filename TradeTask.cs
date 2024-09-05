@@ -57,71 +57,128 @@ namespace FollowBot
             if (LokiPoe.InGameState.TradeUi.IsOpened)
             {
 
-                if (!currentArea.IsHideoutArea)
+                if (!currentArea.IsHideoutArea && !currentArea.IsTown)
                 {
                     Log.InfoFormat("[TradeTask] Start Trade in map");
                     //  Map trade logic
-                    while (TradeUi.IsOpened)
+                    try
                     {
-                        List<Item> allItems = TradeUi.TradeControl.InventoryControl_OtherOffer.Inventory.Items;
 
-                        var transparentItems = allItems?.Where(
-                                                      (Item item) => TradeUi.TradeControl.InventoryControl_OtherOffer.IsItemTransparent(item.LocalId));
-                        foreach (Item item in transparentItems)
+                        while (TradeUi.IsOpened)
                         {
-                            if (!(TradeUi.TradeControl.AcceptButtonText != "accept") || !(TradeUi.TradeControl.AcceptButtonText != "accept (0)"))
-                            {
-                                int itemId = item.LocalId;
-                                TradeControlWrapper tradeControl2 = TradeUi.TradeControl;
-                                tradeControl2?.InventoryControl_OtherOffer.ViewItemsInInventory((ShouldViewItemDelegate)((Inventory inventory, Item invenoryItem) => invenoryItem.LocalId == itemId), (Func<bool>)(() => TradeUi.IsOpened));
-                                continue;
-                            }
-                            int rand = LokiPoe.Random.Next(2000, 3000);
-                            await Coroutine.Sleep(rand);
-                        }
-                        if (TradeUi.TradeControl.AcceptButtonText == "accept" && TradeUi.TradeControl.OtherAcceptedTheOffert)
-                        {
-                            TradeUi.TradeControl.Accept(true);
-                            Log.InfoFormat("[TradeTask] Accepting trade");
-                            await Coroutines.CloseBlockingWindows();
                             await Coroutines.LatencyWait();
-                        }
 
+                            TradeControlWrapper tradeControl1 = TradeUi.TradeControl;
+
+                            if (tradeControl1 == null)
+                            {
+                                GlobalLog.Debug("[TradeTask] TradeControl is null");
+                                break;
+                            }
+
+                            List<Item> allItems = TradeUi.TradeControl.InventoryControl_OtherOffer.Inventory.Items;
+
+                            if (allItems == null) break;
+
+                            var transparentItems = allItems?.Where(
+                                                          (Item item) => TradeUi.TradeControl.InventoryControl_OtherOffer.IsItemTransparent(item.LocalId));
+                            Log.DebugFormat($"[TradeTask] Find {transparentItems.Count()} transparent items.");
+
+
+                            foreach (Item item in transparentItems)
+                            {
+                                if (!(TradeUi.TradeControl.AcceptButtonText != "accept") || !(TradeUi.TradeControl.AcceptButtonText != "accept (0)"))
+                                {
+                                    int itemId = item.LocalId;
+                                    TradeControlWrapper tradeControl = TradeUi.TradeControl;
+                                    tradeControl?.InventoryControl_OtherOffer.ViewItemsInInventory((ShouldViewItemDelegate)((Inventory inventory, Item invenoryItem) => invenoryItem.LocalId == itemId), (Func<bool>)(() => TradeUi.IsOpened));
+                                    continue;
+                                }
+                                await Coroutines.LatencyWait();
+                                int rand = LokiPoe.Random.Next(1000, 2000);
+                                await Coroutine.Sleep(rand);
+                            }
+                            if (TradeUi.TradeControl.AcceptButtonText == "accept" && TradeUi.TradeControl.OtherAcceptedTheOffert)
+                            {
+                                TradeUi.TradeControl.Accept(true);
+                                Log.InfoFormat("[TradeTask] Accepting trade");
+                                await Coroutines.CloseBlockingWindows();
+                                await Coroutines.LatencyWait();
+                            }
+
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        GlobalLog.Debug("[TradeTask] Some error in the trade");
+                        await Coroutines.ReactionWait();
+                        await Coroutines.LatencyWait();
                     }
                 }
-                if (currentArea.IsHideoutArea)
+                if (currentArea.IsHideoutArea || currentArea.IsTown)
                 {
-                    Log.InfoFormat("[TradeTask] Start Trade in Hideot");
-                    // TODO: Add hideout trade logic
-                    while (TradeUi.IsOpened)
+                    Log.InfoFormat("[TradeTask] Start Trade in Hideout");
+
+                    try
                     {
-                        if (TradeUi.TradeControl.MeAcceptedTheOffert)
-                        {
-                            Log.InfoFormat("[TradeTask] Wait accept trade");
-                            continue;
-                        }
-                        var mainInventoryItems = InventoryUi.InventoryControl_Main.Inventory.Items;
-                        foreach (Item item in mainInventoryItems)
-                        {
-                            List<Item> playerInvenoryItems = TradeUi.TradeControl.InventoryControl_YourOffer.Inventory.Items;
-                            //if (playerInvenoryItems.Any(e => e.LocalId == item.LocalId))
-                            //{
-                            //    continue;
-                            //}
-                            InventoryUi.InventoryControl_Main.FastMove(item.LocalId, true, false);
 
-                            await Wait.SleepSafe(LokiPoe.Random.Next(30, 70));
-
-                        }
-                        var playerInvenoryTradeItems2 = TradeUi.TradeControl.InventoryControl_YourOffer.Inventory.Items;
-                        if (playerInvenoryTradeItems2.Count == mainInventoryItems.Count && TradeUi.TradeControl.AcceptButtonText == "accept")
+                        while (TradeUi.IsOpened)
                         {
-                            TradeUi.TradeControl.Accept(true);
-                            Log.InfoFormat("[TradeTask] Accepting trade");
                             await Coroutines.LatencyWait();
+
+                            TradeControlWrapper tradeControl1 = TradeUi.TradeControl;
+
+                            if (tradeControl1 == null)
+                            {
+                                GlobalLog.Debug("[TradeTask] TradeControl is null");
+                                break;
+                            }
+
+
+                            if (TradeUi.TradeControl.MeAcceptedTheOffert)
+                            {
+                                Log.InfoFormat("[TradeTask] Wait accept trade");
+                                continue;
+                            }
+
+                            var mainInventoryItems = InventoryUi.InventoryControl_Main.Inventory.Items;
+                            var sortedInventoryItems = mainInventoryItems.OrderByDescending(item => item.Size).ToList();
+
+
+                            foreach (Item item in sortedInventoryItems)
+                            {
+                                List<Item> yourOfferInventoryItems = TradeUi.TradeControl.InventoryControl_YourOffer.Inventory.Items;
+
+                                if (yourOfferInventoryItems.Any(e => e.LocalId == item.LocalId))
+                                {
+                                    continue;
+                                }
+
+                                InventoryUi.InventoryControl_Main.FastMove(item.LocalId, true, false);
+
+                                await Wait.SleepSafe(LokiPoe.Random.Next(30, 70));
+
+                            }
+
+                            var tradeItemsFromYourInventory = TradeUi.TradeControl.InventoryControl_YourOffer.Inventory.Items;
+
+                            if (tradeItemsFromYourInventory.Count == mainInventoryItems.Count && TradeUi.TradeControl.AcceptButtonText == "accept")
+                            {
+                                TradeUi.TradeControl.Accept(true);
+                                Log.InfoFormat("[TradeTask] Accepting trade");
+                                await Coroutines.LatencyWait();
+                            }
+
                         }
 
                     }
+                    catch (Exception)
+                    {
+                        GlobalLog.Debug("[TradeTask] Some error in the trade");
+                        await Coroutines.ReactionWait();
+                        await Coroutines.LatencyWait();
+                    }
+
 
 
                 }
