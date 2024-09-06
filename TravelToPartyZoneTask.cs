@@ -8,6 +8,7 @@ using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.GameData;
 using DreamPoeBot.Loki.Game.Objects;
+using DreamPoeBot.Loki.RemoteMemoryObjects;
 using FollowBot.Helpers;
 using FollowBot.SimpleEXtensions;
 using log4net;
@@ -250,8 +251,14 @@ namespace FollowBot
         }
         private async Task<bool> GoToPartyLeaderZone()
         {
+            var leader = LokiPoe.InstanceInfo.PartyMembers.FirstOrDefault(x => x.MemberStatus == PartyStatus.PartyLeader);
+            if (leader == null) return false;
+            var leaderPlayerEntry = leader.PlayerEntry;
+            if (leaderPlayerEntry == null) return false;
+
+            var leaderArea = leaderPlayerEntry?.Area;
             var zoneTransition = LokiPoe.ObjectManager.GetObjectsByType<AreaTransition>().OrderBy(x => x.Distance).FirstOrDefault(x => ExilePather.PathExistsBetween(LokiPoe.Me.Position, ExilePather.FastWalkablePositionFor(x.Position, 20)));
-            if (zoneTransition != null)
+            if (zoneTransition != null && leaderArea != null && !leaderArea.Equals(LokiPoe.CurrentWorldArea))
             {
                 if (zoneTransition.Position.Distance(LokiPoe.Me.Position) > 18)
                     await Move.AtOnce(zoneTransition.Position, "Move to Move to leader zone");
