@@ -258,9 +258,9 @@ namespace FollowBot
 
             var leaderArea = leaderPlayerEntry?.Area;
             var zoneTransition = LokiPoe.ObjectManager.GetObjectsByType<AreaTransition>().OrderBy(x => x.Distance).FirstOrDefault(x => ExilePather.PathExistsBetween(LokiPoe.Me.Position, ExilePather.FastWalkablePositionFor(x.Position, 20)));
-            if (zoneTransition != null && leaderArea != null && !leaderArea.Equals(LokiPoe.CurrentWorldArea))
+            if (zoneTransition != null && leaderArea != null && (leaderArea.Id != World.CurrentArea.Id))
             {
-                if (zoneTransition.Position.Distance(LokiPoe.Me.Position) > 18)
+                if (zoneTransition.Position.Distance(LokiPoe.Me.Position) > 15)
                     await Move.AtOnce(zoneTransition.Position, "Move to Move to leader zone");
                 if (await Coroutines.InteractWith<AreaTransition>(zoneTransition))
                     return true;

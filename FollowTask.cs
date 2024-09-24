@@ -10,6 +10,7 @@ using log4net;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Media.Animation;
 using static DreamPoeBot.Loki.Game.LokiPoe;
 
 
@@ -137,14 +138,26 @@ namespace FollowBot
                         if (teleport == null)
                             return false;
                         Log.DebugFormat("[{0}] Found walkable Teleport.", Name);
+                    RepeatBehavior2:
                         if (LokiPoe.Me.Position.Distance(teleport.Position) > 20)
                         {
-                            var walkablePosition = ExilePather.FastWalkablePositionFor(teleport, 20);
 
+                            var leader2 = FollowBot.Leader;
+
+                            var leaderPos2 = leader.Position;
+                            var mypos2 = LokiPoe.Me.Position;
+                            if (!ExilePather.PathExistsBetween(leaderPos2, mypos2))
+                            {
+                                return false;
+                            }
+                            var walkablePosition = ExilePather.FastWalkablePositionFor(teleport, 20);
                             // Cast Phase run if we have it.
                             FollowBot.PhaseRun();
 
-                            Move.Towards(walkablePosition, "moving to Teleport");
+                            if (Move.Towards(walkablePosition, "moving to Teleport"))
+                            {
+                                goto RepeatBehavior2;
+                            }
                             return true;
                         }
 
