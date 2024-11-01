@@ -102,14 +102,22 @@
                                 VerticalAlignment="Center"
                                 ToolTip="Work if enable Loot visible item."/>
                             <CheckBox
-                                Grid.Row="3"
+                            Grid.Row="3"
+                            Grid.Column="0"
+                            Margin="10,0,10,0"
+                            Content="Enable interact quest"
+                            VerticalAlignment="Center"
+                            ToolTip="Interact quest object and npc"
+                                />
+                            <CheckBox
+                                Grid.Row="4"
                                 Grid.Column="0"
                                 Margin="10,0,10,0"
                                 Content="Use Stalker Sentinel"
                                 IsChecked="{Binding Path=UseStalkerSentinel, Mode=TwoWay}"
                                 VerticalAlignment="Center"
                                 ToolTip="Use the Stalker Sentinel if equipped and have charged."/>
-                            <CheckBox Grid.Row="4"
+                            <CheckBox Grid.Row="5"
                                       Grid.Column="0"
                                       Content="Don't Port Out of Map"
                                       Margin="10,0,10,0"
@@ -117,7 +125,7 @@
                                       VerticalAlignment="Center"
                                       ToolTip="If Enabled, the follower will not try to exit a map if the Leader die or leave the area, you will need to use chat command to leave the area."
                                     Grid.ColumnSpan="3"/>
-                            <WrapPanel Grid.Row="5"
+                            <WrapPanel Grid.Row="6"
                                     Grid.Column="0"
                                     Grid.ColumnSpan="3">
                                 <Label Content="Teleport Out delay: "

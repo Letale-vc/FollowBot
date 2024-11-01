@@ -1,20 +1,19 @@
-﻿using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using DreamPoeBot.Common;
+﻿using DreamPoeBot.Common;
 using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Bot.Pathfinding;
 using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.GameData;
 using DreamPoeBot.Loki.Game.Objects;
-using DreamPoeBot.Loki.RemoteMemoryObjects;
 using FollowBot.Helpers;
 using FollowBot.SimpleEXtensions;
 using log4net;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 
-namespace FollowBot
+namespace FollowBot.Tasks
 {
     class TravelToPartyZoneTask : ITask
     {
@@ -75,7 +74,7 @@ namespace FollowBot
                 //{
                 //    if (FollowBotSettings.Instance.DontPortOutofMap) return false;
                 //}
-                if (PortOutStopwatch.IsRunning && PortOutStopwatch.ElapsedMilliseconds < (FollowBotSettings.Instance.PortOutThreshold * 1000))
+                if (PortOutStopwatch.IsRunning && PortOutStopwatch.ElapsedMilliseconds < FollowBotSettings.Instance.PortOutThreshold * 1000)
                 {
 
                 }
@@ -230,7 +229,7 @@ namespace FollowBot
                     await Coroutines.LatencyWait();
                     return true;
                 }
-                if (PortOutStopwatch.IsRunning && PortOutStopwatch.ElapsedMilliseconds >= (FollowBotSettings.Instance.PortOutThreshold * 1000))
+                if (PortOutStopwatch.IsRunning && PortOutStopwatch.ElapsedMilliseconds >= FollowBotSettings.Instance.PortOutThreshold * 1000)
                 {
                     PortOutStopwatch.Reset();
                     GlobalLog.Warn($"[TravelToPartyZoneTask] {FollowBotSettings.Instance.PortOutThreshold} seconds elapsed and Party leader is in still a diffrerent zone porting!.");
@@ -258,7 +257,7 @@ namespace FollowBot
 
             var leaderArea = leaderPlayerEntry?.Area;
             var zoneTransition = LokiPoe.ObjectManager.GetObjectsByType<AreaTransition>().OrderBy(x => x.Distance).FirstOrDefault(x => ExilePather.PathExistsBetween(LokiPoe.Me.Position, ExilePather.FastWalkablePositionFor(x.Position, 20)));
-            if (zoneTransition != null && leaderArea != null && (leaderArea.Id != World.CurrentArea.Id))
+            if (zoneTransition != null && leaderArea != null && leaderArea.Id != World.CurrentArea.Id)
             {
                 if (zoneTransition.Position.Distance(LokiPoe.Me.Position) > 15)
                     await Move.AtOnce(zoneTransition.Position, "Move to Move to leader zone");
@@ -294,9 +293,9 @@ namespace FollowBot
             }
         }
 
-        public async Task<LogicResult> Logic(Logic logic)
+        public Task<LogicResult> Logic(Logic logic)
         {
-            return LogicResult.Unprovided;
+            return Task.FromResult(LogicResult.Unprovided);
         }
 
         public MessageResult Message(Message message)

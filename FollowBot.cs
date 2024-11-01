@@ -10,6 +10,7 @@ using FollowBot.Class;
 using FollowBot.SimpleEXtensions;
 using FollowBot.SimpleEXtensions.CommonTasks;
 using FollowBot.SimpleEXtensions.Global;
+using FollowBot.Tasks;
 using log4net;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -348,7 +349,7 @@ namespace FollowBot
             return _taskManager;
         }
 
-        public async void Initialize()
+        public void Initialize()
         {
             BotManager.OnBotChanged += BotManagerOnOnBotChanged;
             GameOverlay.TimerService.EnableHighPrecisionTimers();
@@ -373,6 +374,7 @@ namespace FollowBot
 
             _taskManager.Add(new ClearCursorTask());
             _taskManager.Add(new TradeTask());
+            _taskManager.Add(new QuestInterctTask());
             _taskManager.Add(new DefenseAndFlaskTask());
             _taskManager.Add(new LootItemTask());
             _taskManager.Add(new PreCombatFollowTask());
@@ -383,7 +385,7 @@ namespace FollowBot
             _taskManager.Add(new CastAuraTask());
             _taskManager.Add(new TravelToPartyZoneTask());
             _taskManager.Add(new FollowTask());
-            _taskManager.Add(new OpenWaypointTask());
+            // _taskManager.Add(new OpenWaypointTask());
             _taskManager.Add(new JoinPartyTask());
             _taskManager.Add(new FallbackTask());
         }
@@ -448,7 +450,7 @@ namespace FollowBot
         public string Name => "FollowBot";
         public string Author => "NotYourFriend, origial code from Unknown";
         public string Description => "Bot that follow leader.";
-        public string Version => "0.0.6.12";
+        public string Version => "0.0.7.0";
         public UserControl Control => _gui ?? (_gui = new FollowBotGui());
         public JsonSettings Settings => FollowBotSettings.Instance;
         public override string ToString() => $"{Name}: {Description}";

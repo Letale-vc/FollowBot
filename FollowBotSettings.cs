@@ -1,14 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
-using DreamPoeBot.Loki;
+﻿using DreamPoeBot.Loki;
 using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.GameData;
 using DreamPoeBot.Loki.Game.Objects;
 using FollowBot.Class;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
 
 namespace FollowBot
 {
@@ -217,6 +217,17 @@ namespace FollowBot
                 _shouldLootOnlyQuestItem = value; NotifyPropertyChanged(() => ShouldLootOnlyQuestItem);
             }
         }
+        private bool _interactQuest;
+        [DefaultValue(false)]
+        public bool InteractQuest
+        {
+            get { return _interactQuest; }
+            set
+            {
+                _interactQuest = value; NotifyPropertyChanged(() => InteractQuest);
+            }
+        }
+
         [DefaultValue(false)]
         public bool UseStalkerSentinel
         {

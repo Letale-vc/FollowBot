@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using DreamPoeBot.Loki.Bot;
+﻿using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.NativeWrappers;
 using DreamPoeBot.Loki.Game.Objects;
@@ -9,9 +6,12 @@ using DreamPoeBot.Loki.RemoteMemoryObjects;
 using FollowBot.Class;
 using FollowBot.Helpers;
 using FollowBot.SimpleEXtensions;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using FlaskHud = DreamPoeBot.Loki.Game.LokiPoe.InGameState.QuickFlaskHud;
 
-namespace FollowBot
+namespace FollowBot.Tasks
 {
     public class DefenseAndFlaskTask : ITask
     {
@@ -312,9 +312,9 @@ namespace FollowBot
             return MessageResult.Unprocessed;
         }
 
-        public async Task<LogicResult> Logic(Logic logic)
+        public Task<LogicResult> Logic(Logic logic)
         {
-            return LogicResult.Unprovided;
+            return Task.FromResult(LogicResult.Unprovided);
         }
 
         public void Start()
