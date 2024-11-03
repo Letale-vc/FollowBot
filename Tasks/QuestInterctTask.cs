@@ -53,6 +53,7 @@ namespace FollowBot.Tasks
 
         public async Task<bool> Run()
         {
+            if (!FollowBotSettings.Instance.InteractQuest) return true;
             var areaId = LokiPoe.CurrentWorldArea.Id;
 
             foreach (var interactQuestObj in QuestInteractionObjects)
