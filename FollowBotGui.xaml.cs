@@ -7,7 +7,7 @@ using System.Windows.Controls;
 namespace FollowBot
 {
     /// <summary>
-    /// Logica di interazione per LabRunnerBotGui.xaml
+    /// Logica di interazione per FollowBotGui.xaml
     /// </summary>
     public partial class FollowBotGui : UserControl
     {

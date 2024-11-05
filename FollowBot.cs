@@ -374,7 +374,7 @@ namespace FollowBot
 
             _taskManager.Add(new ClearCursorTask());
             _taskManager.Add(new TradeTask());
-            _taskManager.Add(new QuestInterctTask());
+            _taskManager.Add(new QuestInteractionTask());
             _taskManager.Add(new DefenseAndFlaskTask());
             _taskManager.Add(new LootItemTask());
             _taskManager.Add(new PreCombatFollowTask());
@@ -450,7 +450,7 @@ namespace FollowBot
         public string Name => "FollowBot";
         public string Author => "NotYourFriend, origial code from Unknown";
         public string Description => "Bot that follow leader.";
-        public string Version => "0.0.7.0";
+        public string Version => "0.0.7.1";
         public UserControl Control => _gui ?? (_gui = new FollowBotGui());
         public JsonSettings Settings => FollowBotSettings.Instance;
         public override string ToString() => $"{Name}: {Description}";

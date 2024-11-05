@@ -47,6 +47,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <Grid.ColumnDefinitions>
@@ -98,8 +99,8 @@
                                 Grid.Column="0"
                                 Margin="10,0,10,0"
                                 Content="Loot only quest items"
-                                IsChecked="{Binding Path=ShouldLootOnlyQuestItem, Mode=TwoWay}"
                                 VerticalAlignment="Center"
+                                IsChecked="{Binding Path=ShouldLootOnlyQuestItem, Mode=TwoWay}"
                                 ToolTip="Work if enable Loot visible item."/>
                             <CheckBox
                             Grid.Row="3"
@@ -107,6 +108,7 @@
                             Margin="10,0,10,0"
                             Content="Enable interact quest"
                             VerticalAlignment="Center"
+                            IsChecked="{Binding Path=InteractQuest, Mode=TwoWay}"
                             ToolTip="Interact quest object and npc"
                                 />
                             <CheckBox

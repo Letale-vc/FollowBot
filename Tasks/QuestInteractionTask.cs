@@ -32,7 +32,7 @@ namespace FollowBot.Tasks
         }
     }
 
-    class QuestInterctTask : ITask
+    class QuestInteractionTask : ITask
     {
 
         private readonly ILog Log = Logger.GetLoggerInstanceForType();
@@ -53,7 +53,7 @@ namespace FollowBot.Tasks
 
         public async Task<bool> Run()
         {
-            if (!FollowBotSettings.Instance.InteractQuest) return true;
+            if (!FollowBotSettings.Instance.InteractQuest) return false;
             var areaId = LokiPoe.CurrentWorldArea.Id;
 
             foreach (var interactQuestObj in QuestInteractionObjects)
@@ -65,10 +65,10 @@ namespace FollowBot.Tasks
                 NetworkObject interactTarget = LokiPoe.ObjectManager.Objects.FirstOrDefault(x => x.Name == interactQuestObj.ObjectName);
 
                 if (interactTarget == null) continue;
-                if (!interactTarget.IsTargetable) continue;
+                if (!interactTarget.IsTargetable) return false;
                 if (!LokiPoe.CurrentWorldArea.IsTown && LokiPoe.Me.Position.Distance(interactTarget.Position) > 30)
                 {
-                    continue;
+                    return false;
                 }
                 Log.Debug($"[{Name}: Find interact object [{interactQuestObj.ObjectName}]");
                 await interactTarget.WalkablePosition().ComeAtOnce();
