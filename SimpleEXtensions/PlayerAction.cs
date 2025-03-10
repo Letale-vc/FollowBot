@@ -30,6 +30,7 @@ namespace FollowBot.SimpleEXtensions
                     GlobalLog.Error("[OpenWaypoint] Fail to find any Waypoint nearby.");
                     return false;
                 }
+
                 wpPos = wpObj.WalkablePosition();
             }
 
@@ -39,7 +40,8 @@ namespace FollowBot.SimpleEXtensions
 
             await Interact(LokiPoe.ObjectManager.Waypoint,
                 () => LokiPoe.InGameState.WorldUi.IsOpened ||
-                      LokiPoe.InGameState.GlobalWarningDialog.IsBetrayalLeaveZoneWarningOverlayOpen, "wold panel opening");
+                      LokiPoe.InGameState.GlobalWarningDialog.IsBetrayalLeaveZoneWarningOverlayOpen,
+                "wold panel opening");
 
             if (LokiPoe.InGameState.GlobalWarningDialog.IsBetrayalLeaveZoneWarningOverlayOpen)
             {
@@ -51,6 +53,7 @@ namespace FollowBot.SimpleEXtensions
             await Wait.SleepSafe(200);
             return LokiPoe.InGameState.WorldUi.IsOpened;
         }
+
         public static async Task<bool> Interact(NetworkObject obj, Func<bool> success, string desc, int timeout = 3000)
         {
             if (obj == null)
@@ -72,16 +75,33 @@ namespace FollowBot.SimpleEXtensions
                     await Wait.For(() => LokiPoe.InGameState.SellUi.IsOpened, "Tane Sell Inventory", 100, timeout);
                     return false;
                 }
+
                 if (!await Wait.For(success, desc, 100, timeout))
                     return false;
 
                 GlobalLog.Debug($"[Interact] \"{name}\" has been successfully interacted.");
                 return true;
             }
+
             GlobalLog.Error($"[Interact] Fail to interact with \"{name}\".");
             await Wait.SleepSafe(300, 500);
             return false;
         }
+
+        public static async Task<bool> TryInteractWith(NetworkObject target, int maxRetries = 3)
+        {
+            for (var i = 0; i < maxRetries; i++)
+            {
+                var success = await Coroutines.InteractWith(target);
+                if (success) return true;
+                GlobalLog.Warn($"[Interact] Interaction with {target.Name} failed. Retry {i + 1}/{maxRetries}.");
+                await Task.Delay(500);
+            }
+
+            GlobalLog.Error($"[Interact] Failed to interact with {target.Name} after {maxRetries} retries.");
+            return false;
+        }
+
         public static async Task<bool> Interact(NetworkObject obj)
         {
             //return await Interact(obj._entity);
@@ -103,10 +123,12 @@ namespace FollowBot.SimpleEXtensions
                 GlobalLog.Debug($"[Interact] \"{name}\" has been successfully interacted.");
                 return true;
             }
+
             GlobalLog.Error($"[Interact] Fail to interact with \"{name}\".");
             await Wait.SleepSafe(100, 200);
             return false;
         }
+
         public static async Task<bool> Interact(NetworkObject obj, int attempts)
         {
             if (obj == null)
@@ -118,7 +140,7 @@ namespace FollowBot.SimpleEXtensions
             var name = obj.Name;
             GlobalLog.Debug($"[Interact] Now going to interact with \"{name}\".");
 
-            for (int i = 1; i <= attempts; i++)
+            for (var i = 1; i <= attempts; i++)
             {
                 if (!LokiPoe.IsInGame || LokiPoe.Me.IsDead)
                     break;
@@ -132,11 +154,14 @@ namespace FollowBot.SimpleEXtensions
                     GlobalLog.Debug($"[Interact] \"{name}\" has been successfully interacted.");
                     return true;
                 }
+
                 GlobalLog.Error($"[Interact] Fail to interact with \"{name}\". Attempt: {i}/{attempts}.");
                 await Wait.SleepSafe(100, 200);
             }
+
             return false;
         }
+
         public static async Task<bool> Logout()
         {
             GlobalLog.Debug("[Logout] Now going to log out.");
@@ -147,11 +172,13 @@ namespace FollowBot.SimpleEXtensions
                 GlobalLog.Error($"[Logout] Fail to log out. Error: \"{err}\".");
                 return false;
             }
+
             return await Wait.For(() => LokiPoe.IsInLoginScreen, "log out", 500, 5000);
         }
+
         public static async Task<bool> TryTo(Func<Task<bool>> action, string desc, int attempts, int interval = 1000)
         {
-            for (int i = 1; i <= attempts; ++i)
+            for (var i = 1; i <= attempts; ++i)
             {
                 if (!LokiPoe.IsInGame || LokiPoe.Me.IsDead)
                     break;
@@ -164,24 +191,25 @@ namespace FollowBot.SimpleEXtensions
 
                 await Wait.SleepSafe(interval);
             }
+
             return false;
         }
+
         public static async Task<bool> GoToHideout()
         {
-            bool res = false;
-            if ((World.CurrentArea.IsTown || World.CurrentArea.IsMenagerieArea))
-            {
+            var res = false;
+            if (World.CurrentArea.IsTown || World.CurrentArea.IsMenagerieArea)
                 res = await GoToHideoutViaCommand();
-            }
             else
                 res = await GoToHideoutViaWaypoint();
 
             return res;
         }
+
         private static async Task<bool> GoToHideoutViaCommand()
         {
             // Aggressive protection against exceptions, make sure this will never run unless everything is perfect.
-            
+
 
             GlobalLog.Debug("[GoToHideoutViaCommand] Now going to hideout via chat command.");
 
@@ -190,32 +218,27 @@ namespace FollowBot.SimpleEXtensions
             var err = LokiPoe.InGameState.ChatPanel.Commands.hideout();
             if (err != LokiPoe.InGameState.ChatResult.None)
             {
-                GlobalLog.Error($"[GoToHideoutViaCommand] Fail to use /hideout command. Fail-safe activated. Error: \"{err}\".");
+                GlobalLog.Error(
+                    $"[GoToHideoutViaCommand] Fail to use /hideout command. Fail-safe activated. Error: \"{err}\".");
                 return false;
             }
 
             var changed = await Wait.ForHOChange();
             if (!changed)
-            {
                 GlobalLog.Error("[GoToHideoutViaCommand] Wait.ForAreaChange failed. Fail-safe activated.");
-            }
             else
-            {
-                GlobalLog.Debug($"[PlayerAction] changed: true");
-               
-            }
+                GlobalLog.Debug("[PlayerAction] changed: true");
             return changed;
         }
+
         private static async Task<bool> GoToHideoutViaWaypoint()
         {
             if (!LokiPoe.InGameState.WorldUi.IsOpened)
-            {
                 if (!await OpenWaypoint())
                 {
                     GlobalLog.Error("[GoToHideoutViaWaypoint] Fail to open a waypoint.");
                     return false;
                 }
-            }
 
             GlobalLog.Debug("[GoToHideoutViaWaypoint] Now going to take a waypoint to hideout.");
 
@@ -227,15 +250,19 @@ namespace FollowBot.SimpleEXtensions
                 GlobalLog.Error($"[GoToHideoutViaWaypoint] Fail to take a waypoint to hideout. Error: \"{err}\".");
                 return false;
             }
+
             return await Wait.ForHOChange();
         }
+
         public static async Task<bool> TpToTown(bool forceNewPortal = false, bool repeatUntilInTown = true)
         {
             if (ErrorManager.GetErrorCount("TpToTown") > 5)
             {
-                GlobalLog.Debug("[TpToTown] We failed to take a portal to town more than 5 times. Now going to log out.");
+                GlobalLog.Debug(
+                    "[TpToTown] We failed to take a portal to town more than 5 times. Now going to log out.");
                 return await Logout();
             }
+
             GlobalLog.Debug("[TpToTown] Now going to open and take a portal to town.");
 
             var area = World.CurrentArea;
@@ -245,7 +272,9 @@ namespace FollowBot.SimpleEXtensions
                 GlobalLog.Error("[TpToTown] We are already in town/hideout.");
                 return false;
             }
-            if (!area.IsOverworldArea && !area.IsMap && !area.IsCorruptedArea && !area.IsMapRoom && !area.IsTempleOfAtzoatl && area.Name != "Syndicate Hideout")
+
+            if (!area.IsOverworldArea && !area.IsMap && !area.IsCorruptedArea && !area.IsMapRoom &&
+                !area.IsTempleOfAtzoatl && area.Name != "Syndicate Hideout")
             {
                 GlobalLog.Warn($"[TpToTown] Cannot create portals in this area ({area.Name}). Now going to log out.");
                 return await Logout();
@@ -264,7 +293,8 @@ namespace FollowBot.SimpleEXtensions
             }
             else
             {
-                GlobalLog.Debug($"[TpToTown] There is a ready-to-use portal at a distance of {portal.Distance}. Now going to take it.");
+                GlobalLog.Debug(
+                    $"[TpToTown] There is a ready-to-use portal at a distance of {portal.Distance}. Now going to take it.");
             }
 
             if (!await TakePortal(portal))
@@ -276,10 +306,13 @@ namespace FollowBot.SimpleEXtensions
             var newArea = World.CurrentArea;
             if (repeatUntilInTown && newArea.IsCombatArea)
             {
-                GlobalLog.Debug($"[TpToTown] After taking a portal we appeared in another combat area ({newArea.Name}). Now calling TpToTown again.");
+                GlobalLog.Debug(
+                    $"[TpToTown] After taking a portal we appeared in another combat area ({newArea.Name}). Now calling TpToTown again.");
                 return await TpToTown(forceNewPortal);
             }
-            GlobalLog.Debug($"[TpToTown] We have been successfully teleported from \"{area.Name}\" to \"{newArea.Name}\".");
+
+            GlobalLog.Debug(
+                $"[TpToTown] We have been successfully teleported from \"{area.Name}\" to \"{newArea.Name}\".");
             return true;
 
             //while (!LokiPoe.InGameState.IsRightPanelShown)
@@ -289,6 +322,7 @@ namespace FollowBot.SimpleEXtensions
             //}
             //return true;
         }
+
         public static async Task<bool> TakeTransition(AreaTransition transition, bool newInstance = false)
         {
             if (transition == null)
@@ -299,25 +333,15 @@ namespace FollowBot.SimpleEXtensions
 
             WalkablePosition pos;
             if (transition.Name == "Shrine of the Winds")
-            {
                 pos = transition.WalkablePosition(7, 10);
-            }
             else if (transition.Name == "The Chamber of Sins Level 2")
-            {
                 pos = transition.WalkablePosition(2, 5);
-            }
             else if (transition.Name == "The Crypt Level 1")
-            {
                 pos = transition.WalkablePosition(2, 5);
-            }
             else if (transition.Name == "Tukohama's Keep")
-            {
                 pos = transition.WalkablePosition(2, 5);
-            }
             else
-            {
                 pos = transition.WalkablePosition();
-            }
 
             var type = transition.TransitionType;
 
@@ -343,36 +367,34 @@ namespace FollowBot.SimpleEXtensions
                      LokiPoe.CurrentWorldArea.Name == "The Upper Sceptre of God")
             {
                 if (transition.Name == "Tower Rooftop")
-                {
                     await new WalkablePosition("Unstuck Position", new Vector2i(2691, 423), 2, 5).ComeAtOnce(6);
-                }
                 else
                     await pos.ComeAtOnce(13);
             }
             else if (transition.Name == "Tukohama's Keep")
             {
                 if (transition.Position == new Vector2i(1022, 350))
-                {
                     await new WalkablePosition("Unstuck Position", new Vector2i(1024, 315), 2, 5).ComeAtOnce(8);
-                }
                 else
                     await new WalkablePosition("Unstuck Position", new Vector2i(1232, 323), 2, 5).ComeAtOnce(8);
             }
             else if (transition.Name == "The Quay")
             {
-                await new WalkablePosition("Unstuck Position", new Vector2i(transition.Position.X + 10, transition.Position.Y - 10), 2, 6).ComeAtOnce(6);
+                await new WalkablePosition("Unstuck Position",
+                    new Vector2i(transition.Position.X + 10, transition.Position.Y - 10), 2, 6).ComeAtOnce(6);
             }
             else
             {
                 await pos.ComeAtOnce();
             }
+
             await Coroutines.FinishCurrentAction();
             await Wait.SleepSafe(100);
 
             var hash = LokiPoe.LocalData.AreaHash;
             var myPos = LokiPoe.MyPosition;
 
-            bool entered = newInstance
+            var entered = newInstance
                 ? await CreateNewInstance(transition)
                 : await Interact(transition);
 
@@ -381,7 +403,7 @@ namespace FollowBot.SimpleEXtensions
                 if (!await Wait.For(() => LokiPoe.Me.HasAura("Grace Period") ||
                                           myPos.Distance(LokiPoe.MyPosition) > 15, "local transition", 500, 5000))
                 {
-                    GlobalLog.Error($"Grace: " +
+                    GlobalLog.Error("Grace: " +
                                     $"{LokiPoe.Me.HasAura("Grace Period")}, " +
                                     $"LastPos: {myPos}, CurrentPos: {LokiPoe.Me.Position}, " +
                                     $"Distance: {myPos.Distance(LokiPoe.MyPosition)}");
@@ -395,24 +417,25 @@ namespace FollowBot.SimpleEXtensions
                 if (!await Wait.ForAreaChange(hash))
                     return false;
             }
+
             GlobalLog.Debug($"[TakeTransition] \"{pos.Name}\" has been successfully entered.");
             return true;
         }
+
         public static async Task<bool> TakeTransitionByName(string name, bool newInstance = false)
         {
             var transition = LokiPoe.ObjectManager.Objects.Closest<AreaTransition>(a => a.Name == name);
             return await TakeTransition(transition, newInstance);
         }
+
         public static async Task<bool> TakeWaypoint(AreaInfo area, bool newInstance = false)
         {
             if (!LokiPoe.InGameState.WorldUi.IsOpened)
-            {
                 if (!await OpenWaypoint())
                 {
                     GlobalLog.Error("[TakeWaypoint] Fail to open a waypoint.");
                     return false;
                 }
-            }
 
             GlobalLog.Debug($"[TakeWaypoint] Now going to take a waypoint to {area}");
 
@@ -424,8 +447,10 @@ namespace FollowBot.SimpleEXtensions
                 GlobalLog.Error($"[TakeWaypoint] Fail to take a waypoint to {area}. Error: \"{err}\".");
                 return false;
             }
+
             return await Wait.ForAreaChange(areaHash);
         }
+
         private static async Task<bool> CreateNewInstance(AreaTransition transition)
         {
             var name = transition.Name;
@@ -448,17 +473,21 @@ namespace FollowBot.SimpleEXtensions
                 GlobalLog.Error($"[CreateNewInstance] Fail to create a new instance. Error: \"{err}\".");
                 return false;
             }
+
             GlobalLog.Debug($"[CreateNewInstance] New instance for \"{name}\" has been successfully created.");
             return true;
         }
+
         private static Portal PortalInRangeOf(int range)
         {
             return LokiPoe.ObjectManager.Objects
                 .Closest<Portal>(p => p.IsPlayerPortal() && p.Distance <= range && p.PathDistance() <= range + 3);
         }
+
         public static async Task<Portal> CreateTownPortal()
         {
-            var portalSkill = LokiPoe.InGameState.SkillBarHud.Skills.FirstOrDefault(s => s.Name == "Portal" && s.IsOnSkillBar);
+            var portalSkill =
+                LokiPoe.InGameState.SkillBarHud.Skills.FirstOrDefault(s => s.Name == "Portal" && s.IsOnSkillBar);
             if (portalSkill != null)
             {
                 await Coroutines.FinishCurrentAction();
@@ -469,6 +498,7 @@ namespace FollowBot.SimpleEXtensions
                     GlobalLog.Error($"[CreateTownPortal] Fail to cast portal skill. Error: \"{err}\".");
                     return null;
                 }
+
                 await Coroutines.FinishCurrentAction();
                 await Wait.SleepSafe(100);
             }
@@ -485,7 +515,7 @@ namespace FollowBot.SimpleEXtensions
                     return null;
                 }
 
-                int itemId = portalScroll.LocalId;
+                var itemId = portalScroll.LocalId;
 
                 if (!await Inventories.OpenInventory())
                     return null;
@@ -509,24 +539,29 @@ namespace FollowBot.SimpleEXtensions
             await Wait.For(() => (portal = PortalInRangeOf(40)) != null, "portal spawning");
             return portal;
         }
+
         public static async Task EnableAlwaysHighlight()
         {
             if (LokiPoe.ConfigManager.IsAlwaysHighlightEnabled)
                 return;
 
             GlobalLog.Info("[EnableAlwaysHighlight] Now enabling always highlight.");
-            LokiPoe.Input.SimulateKeyEvent(LokiPoe.Input.Binding.highlight_toggle, true, false, false);
-            await Wait.For(() => LokiPoe.ConfigManager.IsAlwaysHighlightEnabled, "EnableAlwaysHighlight", 10, 100);//.SleepSafe(30);
+            LokiPoe.Input.SimulateKeyEvent(LokiPoe.Input.Binding.highlight_toggle);
+            await Wait.For(() => LokiPoe.ConfigManager.IsAlwaysHighlightEnabled, "EnableAlwaysHighlight", 10,
+                100); //.SleepSafe(30);
         }
+
         public static async Task DisableAlwaysHighlight()
         {
             if (!LokiPoe.ConfigManager.IsAlwaysHighlightEnabled)
                 return;
 
             GlobalLog.Info("[DisableAlwaysHighlight] Now disabling always highlight.");
-            LokiPoe.Input.SimulateKeyEvent(LokiPoe.Input.Binding.highlight_toggle, true, false, false);
-            await Wait.For(() => !LokiPoe.ConfigManager.IsAlwaysHighlightEnabled, "DisableAlwaysHighlight", 10, 100);//.Sleep(30);
+            LokiPoe.Input.SimulateKeyEvent(LokiPoe.Input.Binding.highlight_toggle);
+            await Wait.For(() => !LokiPoe.ConfigManager.IsAlwaysHighlightEnabled, "DisableAlwaysHighlight", 10,
+                100); //.Sleep(30);
         }
+
         public static async Task<bool> TakePortal(Portal portal)
         {
             if (portal == null)
@@ -548,7 +583,7 @@ namespace FollowBot.SimpleEXtensions
                 return false;
 
             if (!await Interact(portal,
-            () => !LokiPoe.IsInGame, "loading screen"))
+                    () => !LokiPoe.IsInGame, "loading screen"))
                 return false;
 
             if (!await Wait.ForAreaChange(hash))
@@ -560,13 +595,10 @@ namespace FollowBot.SimpleEXtensions
 
         public static Task<bool> MoveAway(int min, int max)
         {
-            WorldPosition pos = WorldPosition.FindPathablePositionAtDistance(min, max, 5);
-            if (pos == null)
-            {
-                pos = new WorldPosition(LokiPoe.Me.Position);
-            }
+            var pos = WorldPosition.FindPathablePositionAtDistance(min, max, 5);
+            if (pos == null) pos = new WorldPosition(LokiPoe.Me.Position);
 
-            Vector2i newPosition = pos.AsVector;
+            var newPosition = pos.AsVector;
             newPosition += new Vector2i(LokiPoe.Random.Next(-2, 3), LokiPoe.Random.Next(-2, 3));
             if (!Move.Towards(newPosition, "away"))
             {

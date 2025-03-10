@@ -1,18 +1,17 @@
+using System.Linq;
+using System.Threading.Tasks;
 using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Game;
-using DreamPoeBot.Loki.Game.Objects;
 using FollowBot.SimpleEXtensions;
 using log4net;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace FollowBot.Tasks
 {
-    public class TrialPickerTask : ITask
+    internal class TrialPickerTask : ITask
     {
         private readonly ILog Log = Logger.GetLoggerInstanceForType();
-        public string Author => "Letale";
+        public string Author => "Helpless";
 
         public string Description => "Trial picker task";
 
@@ -27,28 +26,22 @@ namespace FollowBot.Tasks
 
         public MessageResult Message(Message message)
         {
-
             return MessageResult.Unprocessed;
         }
 
         public async Task<bool> Run()
         {
+            if (!LokiPoe.LabyrinthTrialAreaIds.Contains(LokiPoe.CurrentWorldArea.Id)) return false;
+            var me = LokiPoe.Me;
+            if (me.IsAscendencyTrialCompleted(LokiPoe.CurrentWorldArea.Id)) return false;
 
-            if (LokiPoe.LabyrinthTrialAreaIds.Contains(LokiPoe.CurrentWorldArea.Id))
-            {
-                var me = LokiPoe.Me;
-                if (me.IsAscendencyTrialCompleted(LokiPoe.CurrentWorldArea.Id)) return true;
-
-                NetworkObject trial = LokiPoe.ObjectManager.Objects.FirstOrDefault(x => x.Metadata.Contains("LabyrinthTrialPlaque"));
-                if (trial != null && trial.PathExists() && me.Position.Distance(trial.Position) < 30)
-                {
-                    Log.Debug($"[{Name}] Find trial : [{trial.Name}]");
-
-                    await trial.WalkablePosition().ComeAtOnce();
-                    await PlayerAction.Interact(trial);
-
-                }
-            }
+            var trial = LokiPoe.ObjectManager.Objects.FirstOrDefault(x =>
+                x.Metadata.Contains("LabyrinthTrialPlaque"));
+            if (trial == null) return false;
+            Log.Debug($"[{Name}] Find trial : [{trial.Name}]");
+            if (!trial.PathExists() || me.Position.Distance(trial.Position) >= 50) return false;
+            await trial.WalkablePosition().ComeAtOnce();
+            await PlayerAction.Interact(trial);
             return true;
         }
 

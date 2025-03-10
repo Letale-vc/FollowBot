@@ -15,7 +15,6 @@ namespace FollowBot.SimpleEXtensions.Global
 {
     public class CombatAreaCache
     {
-        private static bool IgnoreSyndicateArea = true;
         private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
         private static readonly Interval ScanInterval = new Interval(200);
         private static readonly Interval ItemScanInterval = new Interval(500);

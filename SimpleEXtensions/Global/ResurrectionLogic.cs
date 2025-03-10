@@ -10,23 +10,22 @@ namespace FollowBot.SimpleEXtensions.Global
         public static async Task Execute()
         {
             if (!await Resurrect(true))
-            {
                 if (!await Resurrect(false))
                 {
                     GlobalLog.Error("[ResurrectionLogic] Resurrection failed. Now going to logout.");
                     if (!await Logout())
                     {
-                        GlobalLog.Error("[ResurrectionLogic] Logout failed. Now stopping the bot because it cannot continue.");
+                        GlobalLog.Error(
+                            "[ResurrectionLogic] Logout failed. Now stopping the bot because it cannot continue.");
                         BotManager.Stop();
                         return;
                     }
                 }
-            }
+
             GlobalLog.Info("[Events] Player resurrected.");
             var move = LokiPoe.InGameState.SkillBarHud.LastBoundMoveSkill;
             LokiPoe.InGameState.SkillBarHud.Use(move.Slots.Last(), true);
             Utility.BroadcastMessage(null, Events.Messages.PlayerResurrected);
-
         }
 
         private static async Task<bool> Resurrect(bool toCheckpoint, int attempts = 3)
@@ -40,7 +39,7 @@ namespace FollowBot.SimpleEXtensions.Global
 
             await Wait.ArtificialDelay();
 
-            for (int i = 1; i <= attempts; ++i)
+            for (var i = 1; i <= attempts; ++i)
             {
                 GlobalLog.Debug($"[Resurrect] Attempt: {i}/{attempts}");
 
@@ -49,6 +48,7 @@ namespace FollowBot.SimpleEXtensions.Global
                     GlobalLog.Debug("[Resurrect] Now exiting this logic because we are no longer in game.");
                     return true;
                 }
+
                 if (!LokiPoe.Me.IsDead)
                 {
                     GlobalLog.Debug("[Resurrect] Now exiting this logic because we are no longer dead.");
@@ -68,16 +68,18 @@ namespace FollowBot.SimpleEXtensions.Global
                     await Wait.SleepSafe(250);
                     return true;
                 }
+
                 GlobalLog.Error($"[Resurrect] Fail to resurrect. Error: \"{err}\".");
                 await Wait.SleepSafe(1000, 1500);
             }
+
             GlobalLog.Error("[Resurrect] All resurrection attempts have been spent.");
             return false;
         }
 
         private static async Task<bool> Logout(int attempts = 5)
         {
-            for (int i = 1; i <= attempts; ++i)
+            for (var i = 1; i <= attempts; ++i)
             {
                 GlobalLog.Debug($"[Logout] Attempt: {i}/{attempts}");
 
@@ -86,6 +88,7 @@ namespace FollowBot.SimpleEXtensions.Global
                     GlobalLog.Debug("[Logout] Now exiting this logic because we are no longer in game.");
                     return true;
                 }
+
                 if (!LokiPoe.Me.IsDead)
                 {
                     GlobalLog.Debug("[Logout] Now exiting this logic because we are no longer dead.");
@@ -101,9 +104,11 @@ namespace FollowBot.SimpleEXtensions.Global
                     GlobalLog.Debug("[Logout] Player has been successfully logged out.");
                     return true;
                 }
+
                 GlobalLog.Error($"[Logout] Fail to log out. Error: \"{err}\".");
                 await Wait.SleepSafe(2000, 3000);
             }
+
             GlobalLog.Error("[Logout] All logout attempts have been spent.");
             return false;
         }
@@ -115,6 +120,7 @@ namespace FollowBot.SimpleEXtensions.Global
                 GlobalLog.Error("[Resurrect] Disconnected while waiting for resurrection.");
                 return true;
             }
+
             return !LokiPoe.Me.IsDead;
         }
     }

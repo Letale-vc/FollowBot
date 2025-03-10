@@ -1,4 +1,9 @@
-﻿using DreamPoeBot.Loki.Bot;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Bot.Pathfinding;
 using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Coroutine;
@@ -11,12 +16,9 @@ using FollowBot.SimpleEXtensions;
 using FollowBot.SimpleEXtensions.CommonTasks;
 using FollowBot.SimpleEXtensions.Global;
 using FollowBot.Tasks;
+using GameOverlay;
+using JetBrains.Annotations;
 using log4net;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using Message = DreamPoeBot.Loki.Bot.Message;
 using UserControl = System.Windows.Controls.UserControl;
 
@@ -25,18 +27,51 @@ namespace FollowBot
     public class FollowBot : IBot
     {
         public static readonly ILog Log = Logger.GetLoggerInstanceForType();
-
-        private FollowBotGui _gui;
-        private Coroutine _coroutine;
-
-        private readonly TaskManager _taskManager = new TaskManager();
-        internal static bool IsOnRun;
+        private static bool IsOnRun;
         public static Stopwatch RequestPartySw = Stopwatch.StartNew();
-        private OverlayWindow _overlay = new OverlayWindow(LokiPoe.ClientWindowHandle);
-        private ChatParser _chatParser = new ChatParser();
-        private Stopwatch _chatSw = Stopwatch.StartNew();
-
         private static int _lastBoundMoveSkillSlot = -1;
+        private static Keys _lastBoundMoveSkillKey = Keys.Clear;
+        private static Player _leader;
+
+        private static readonly string[] PlayerMetadataList =
+        {
+            "Metadata/Characters/Dex/Dex",
+            "Metadata/Characters/Int/Int",
+            "Metadata/Characters/Str/Str",
+            "Metadata/Characters/StrDex/StrDex",
+            "Metadata/Characters/StrInt/StrInt",
+            "Metadata/Characters/DexInt/DexInt",
+            "Metadata/Characters/StrDexInt/StrDexInt"
+        };
+
+        private static readonly Dictionary<string, int> TileSeenDict = new Dictionary<string, int>
+        {
+            [MapNames.MaoKun] = 3,
+            [MapNames.Arena] = 3,
+            [MapNames.CastleRuins] = 3,
+            [MapNames.UndergroundRiver] = 3,
+            [MapNames.TropicalIsland] = 3,
+            [MapNames.Beach] = 5,
+            [MapNames.Strand] = 5,
+            [MapNames.Port] = 5,
+            [MapNames.Alleyways] = 5,
+            [MapNames.Phantasmagoria] = 5,
+            [MapNames.Wharf] = 5,
+            [MapNames.Cemetery] = 5,
+            [MapNames.MineralPools] = 5,
+            [MapNames.Temple] = 5,
+            [MapNames.Malformation] = 5
+        };
+
+        private readonly ChatParser _chatParser = new ChatParser();
+        private readonly Stopwatch _chatSw = Stopwatch.StartNew();
+
+        private readonly OverlayWindow _overlay = new OverlayWindow(LokiPoe.ClientWindowHandle);
+        private readonly TaskManager _taskManager = new TaskManager();
+        private Coroutine _coroutine;
+        private FollowBotGui _gui;
+
+
         internal static int LastBoundMoveSkillSlot
         {
             get
@@ -46,7 +81,7 @@ namespace FollowBot
                 return _lastBoundMoveSkillSlot;
             }
         }
-        private static Keys _lastBoundMoveSkillKey = Keys.Clear;
+
         internal static Keys LastBoundMoveSkillKey
         {
             get
@@ -57,14 +92,16 @@ namespace FollowBot
             }
         }
 
-        internal static PartyMember _leaderPartyEntry => LokiPoe.InstanceInfo.PartyMembers.FirstOrDefault(x => x.MemberStatus == PartyStatus.PartyLeader);
-        private static Player _leader;
+        [CanBeNull]
+        public static PartyMember LeaderPartyEntry =>
+            LokiPoe.InstanceInfo.PartyMembers.FirstOrDefault(x => x.MemberStatus == PartyStatus.PartyLeader);
 
+        [CanBeNull]
         public static Player Leader
         {
             get
             {
-                var leaderPartyEntry = _leaderPartyEntry;
+                var leaderPartyEntry = LeaderPartyEntry;
                 if (leaderPartyEntry?.PlayerEntry?.IsOnline != true)
                 {
                     _leader = null;
@@ -92,31 +129,18 @@ namespace FollowBot
                     _leader = leaderPlayer as Player;
 
                     if (_leader == null)
-                    {
                         _leader = LokiPoe.ObjectManager.GetObjectsByType<Player>()
                             .FirstOrDefault(x => x.Name == leaderName);
-                    }
                 }
+
                 return _leader;
             }
             set => _leader = value;
         }
-        public static string[] PlayerMetadataList =
-        {
-            "Metadata/Characters/Dex/Dex", "Metadata/Characters/Int/Int", "Metadata/Characters/Str/Str",
-                            "Metadata/Characters/StrDex/StrDex", "Metadata/Characters/StrInt/StrInt",
-                            "Metadata/Characters/DexInt/DexInt",
-                            "Metadata/Characters/StrDexInt/StrDexInt"
-        };
-        public static void PhaseRun()
-        {
-            if (LokiPoe.Me.Auras.All(x => x.Name != "Phase Run"))
-            {
-                var phaseRun = LokiPoe.InGameState.SkillBarHud.SkillBarSkills.FirstOrDefault(x => x != null && x.InternalName == "NewPhaseRun");
-                if (phaseRun != null && phaseRun.IsOnSkillBar && phaseRun.Slot != -1 && phaseRun.CanUse())
-                    LokiPoe.InGameState.SkillBarHud.Use(phaseRun.Slot, false, false);
-            }
-        }
+
+        private static int TileSeenRadius => TileSeenDict.TryGetValue(World.CurrentArea.Name, out var radius)
+            ? radius
+            : ExplorationSettings.DefaultTileSeenRadius;
 
         public void Start()
         {
@@ -124,7 +148,7 @@ namespace FollowBot
             _lastBoundMoveSkillKey = Keys.Clear;
 
             ItemEvaluator.Instance = DefaultItemEvaluator.Instance;
-            Explorer.CurrentDelegate = user => CombatAreaCache.Current.Explorer.BasicExplorer;
+            Explorer.CurrentDelegate = _ => CombatAreaCache.Current.Explorer.BasicExplorer;
 
             ComplexExplorer.ResetSettingsProviders();
             ComplexExplorer.AddSettingsProvider("FollowBot", MapBotExploration, ProviderPriority.Low);
@@ -157,9 +181,7 @@ namespace FollowBot
             _taskManager.Start();
 
             foreach (var plugin in PluginManager.EnabledPlugins)
-            {
                 Log.Debug($"[Start] The plugin {plugin.Name} is enabled.");
-            }
 
             Log.Debug($"[Start] PlayerMover.Instance: {PlayerMoverManager.Current.GetType()}.");
 
@@ -172,13 +194,10 @@ namespace FollowBot
 
         public void Tick()
         {
-            if (_coroutine == null)
-            {
-                _coroutine = new Coroutine(() => MainCoroutine());
-            }
+            // ReSharper disable once ConvertClosureToMethodGroup
+            if (_coroutine == null) _coroutine = new Coroutine(() => MainCoroutine());
 
             ExilePather.Reload();
-
             Events.Tick();
             CombatAreaCache.Tick();
             _taskManager.Tick();
@@ -190,6 +209,7 @@ namespace FollowBot
                 _chatParser.Update();
                 _chatSw.Restart();
             }
+
             // Check to see if the coroutine is finished. If it is, stop the bot.
             if (_coroutine.IsFinished)
             {
@@ -226,80 +246,6 @@ namespace FollowBot
                 _coroutine.Dispose();
                 _coroutine = null;
             }
-        }
-
-        private async Task MainCoroutine()
-        {
-            while (true)
-            {
-                if (LokiPoe.IsInLoginScreen)
-                {
-                    // Offload auto login logic to a plugin.
-                    var logic = new Logic("hook_login_screen", this);
-                    foreach (var plugin in PluginManager.EnabledPlugins)
-                    {
-                        if (await plugin.Logic(logic) == LogicResult.Provided)
-                            break;
-                    }
-                }
-                else if (LokiPoe.IsInCharacterSelectionScreen)
-                {
-                    // Offload character selection logic to a plugin.
-                    var logic = new Logic("hook_character_selection", this);
-                    foreach (var plugin in PluginManager.EnabledPlugins)
-                    {
-                        if (await plugin.Logic(logic) == LogicResult.Provided)
-                            break;
-                    }
-                }
-                else if (LokiPoe.IsInGame)
-                {
-                    // To make things consistent, we once again allow user coorutine logic to preempt the bot base coroutine logic.
-                    // This was supported to a degree in 2.6, and in general with our bot bases. Technically, this probably should
-                    // be at the top of the while loop, but since the bot bases offload two sets of logic to plugins this way, this
-                    // hook is being placed here.
-                    var hooked = false;
-                    var logic = new Logic("hook_ingame", this);
-                    foreach (var plugin in PluginManager.EnabledPlugins)
-                    {
-                        if (await plugin.Logic(logic) == LogicResult.Provided)
-                        {
-                            hooked = true;
-                            break;
-                        }
-                    }
-
-                    if (!hooked)
-                    {
-                        // Wait for game pause
-                        if (LokiPoe.InstanceInfo.IsGamePaused)
-                        {
-                            Log.Debug("Waiting for game pause");
-                        }
-                        // Resurrect character if it is dead
-                        else if (LokiPoe.Me.IsDead && World.CurrentArea.Id != "HallsOfTheDead_League")
-                        {
-                            await ResurrectionLogic.Execute();
-                        }
-                        // What the bot does now is up to the registered tasks.
-                        else
-                        {
-                            await _taskManager.Run(TaskGroup.Enabled, RunBehavior.UntilHandled);
-                        }
-                    }
-                }
-                else
-                {
-                    // Most likely in a loading screen, which will cause us to block on the executor, 
-                    // but just in case we hit something else that would cause us to execute...
-                    await Coroutine.Sleep(1000);
-                    continue;
-                }
-
-                // End of the tick.
-                await Coroutine.Yield();
-            }
-            // ReSharper disable once FunctionNeverReturns
         }
 
         public MessageResult Message(Message message)
@@ -344,15 +290,10 @@ namespace FollowBot
             return await _taskManager.ProvideLogic(TaskGroup.Enabled, RunBehavior.UntilHandled, logic);
         }
 
-        public TaskManager GetTaskManager()
-        {
-            return _taskManager;
-        }
-
         public void Initialize()
         {
             BotManager.OnBotChanged += BotManagerOnOnBotChanged;
-            GameOverlay.TimerService.EnableHighPrecisionTimers();
+            TimerService.EnableHighPrecisionTimers();
             _overlay.Start();
         }
 
@@ -361,21 +302,89 @@ namespace FollowBot
             BotManager.OnBotChanged -= BotManagerOnOnBotChanged;
         }
 
+        public string Name => "FollowBot";
+        public string Author => "NotYourFriend, origial code from Unknown";
+        public string Description => "Bot that follow leader.";
+        public string Version => "0.0.7.0";
+        public UserControl Control => _gui ?? (_gui = new FollowBotGui());
+        public JsonSettings Settings => FollowBotSettings.Instance;
+
+
+        private async Task MainCoroutine()
+        {
+            while (true)
+            {
+                if (LokiPoe.IsInLoginScreen)
+                {
+                    // Offload auto login logic to a plugin.
+                    var logic = new Logic("hook_login_screen", this);
+                    foreach (var plugin in PluginManager.EnabledPlugins)
+                        if (await plugin.Logic(logic) == LogicResult.Provided)
+                            break;
+                }
+                else if (LokiPoe.IsInCharacterSelectionScreen)
+                {
+                    // Offload character selection logic to a plugin.
+                    var logic = new Logic("hook_character_selection", this);
+                    foreach (var plugin in PluginManager.EnabledPlugins)
+                        if (await plugin.Logic(logic) == LogicResult.Provided)
+                            break;
+                }
+                else if (LokiPoe.IsInGame)
+                {
+                    // To make things consistent, we once again allow user coorutine logic to preempt the bot base coroutine logic.
+                    // This was supported to a degree in 2.6, and in general with our bot bases. Technically, this probably should
+                    // be at the top of the while loop, but since the bot bases offload two sets of logic to plugins this way, this
+                    // hook is being placed here.
+                    var hooked = false;
+                    var logic = new Logic("hook_ingame", this);
+                    foreach (var plugin in PluginManager.EnabledPlugins)
+                        if (await plugin.Logic(logic) == LogicResult.Provided)
+                        {
+                            hooked = true;
+                            break;
+                        }
+
+                    if (!hooked)
+                    {
+                        // Wait for game pause
+                        if (LokiPoe.InstanceInfo.IsGamePaused)
+                            Log.Debug("Waiting for game pause");
+                        // Resurrect character if it is dead
+                        else if (LokiPoe.Me.IsDead && World.CurrentArea.Id != "HallsOfTheDead_League")
+                            await ResurrectionLogic.Execute();
+                        // What the bot does now is up to the registered tasks.
+                        else
+                            await _taskManager.Run(TaskGroup.Enabled, RunBehavior.UntilHandled);
+                    }
+                }
+                else
+                {
+                    // Most likely in a loading screen, which will cause us to block on the executor, 
+                    // but just in case we hit something else that would cause us to execute...
+                    await Coroutine.Sleep(1000);
+                    continue;
+                }
+
+                // End of the tick.
+                await Coroutine.Yield();
+            }
+            // ReSharper disable once FunctionNeverReturns
+        }
+
+        public TaskManager GetTaskManager()
+        {
+            return _taskManager;
+        }
+
         private void BotManagerOnOnBotChanged(object sender, BotChangedEventArgs botChangedEventArgs)
         {
-            if (botChangedEventArgs.New == this)
-            {
-                ItemEvaluator.Instance = DefaultItemEvaluator.Instance;
-            }
+            if (botChangedEventArgs.New == this) ItemEvaluator.Instance = DefaultItemEvaluator.Instance;
         }
 
         private void AddTasks()
         {
-
             _taskManager.Add(new ClearCursorTask());
-            _taskManager.Add(new TradeTask());
-            _taskManager.Add(new QuestInteractionTask());
-            _taskManager.Add(new DefenseAndFlaskTask());
             _taskManager.Add(new LootItemTask());
             _taskManager.Add(new PreCombatFollowTask());
             _taskManager.Add(new CombatTask(50));
@@ -384,9 +393,12 @@ namespace FollowBot
             _taskManager.Add(new CombatTask(-1));
             _taskManager.Add(new CastAuraTask());
             _taskManager.Add(new TravelToPartyZoneTask());
+            _taskManager.Add(new TradeTask());
             _taskManager.Add(new FollowTask());
-            // _taskManager.Add(new OpenWaypointTask());
             _taskManager.Add(new JoinPartyTask());
+            _taskManager.Add(new DefenseAndFlaskTask());
+            _taskManager.Add(new QuestInteractionTask());
+            _taskManager.Add(new TrialPickerTask());
             _taskManager.Add(new FallbackTask());
         }
 
@@ -408,37 +420,12 @@ namespace FollowBot
             Utility.BroadcastMessage(null, Messages.NewMapEntered, areaName);
         }
 
-        private static int TileSeenRadius
+        public override string ToString()
         {
-            get
-            {
-                if (TileSeenDict.TryGetValue(World.CurrentArea.Name, out int radius))
-                    return radius;
-
-                return ExplorationSettings.DefaultTileSeenRadius;
-            }
+            return $"{Name}: {Description}";
         }
 
-        private static readonly Dictionary<string, int> TileSeenDict = new Dictionary<string, int>
-        {
-            [MapNames.MaoKun] = 3,
-            [MapNames.Arena] = 3,
-            [MapNames.CastleRuins] = 3,
-            [MapNames.UndergroundRiver] = 3,
-            [MapNames.TropicalIsland] = 3,
-            [MapNames.Beach] = 5,
-            [MapNames.Strand] = 5,
-            [MapNames.Port] = 5,
-            [MapNames.Alleyways] = 5,
-            [MapNames.Phantasmagoria] = 5,
-            [MapNames.Wharf] = 5,
-            [MapNames.Cemetery] = 5,
-            [MapNames.MineralPools] = 5,
-            [MapNames.Temple] = 5,
-            [MapNames.Malformation] = 5,
-        };
-
-        public static class Messages
+        private static class Messages
         {
             public const string NewMapEntered = "MB_new_map_entered_event";
             public const string MapFinished = "MB_map_finished_event";
@@ -446,13 +433,5 @@ namespace FollowBot
             public const string GetIsOnRun = "MB_get_is_on_run";
             public const string SetIsOnRun = "MB_set_is_on_run";
         }
-
-        public string Name => "FollowBot";
-        public string Author => "NotYourFriend, origial code from Unknown";
-        public string Description => "Bot that follow leader.";
-        public string Version => "0.0.7.1";
-        public UserControl Control => _gui ?? (_gui = new FollowBotGui());
-        public JsonSettings Settings => FollowBotSettings.Instance;
-        public override string ToString() => $"{Name}: {Description}";
     }
 }

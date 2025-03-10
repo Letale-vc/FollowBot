@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using DreamPoeBot.Common;
 using DreamPoeBot.Loki.Bot;
@@ -14,8 +15,23 @@ namespace FollowBot.SimpleEXtensions
 {
     public static class Inventories
     {
-        public static List<Item> InventoryItems => LokiPoe.InstanceInfo.GetPlayerInventoryItemsBySlot(InventorySlot.Main);
-        public static int AvailableInventorySquares => LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.Main).AvailableInventorySquares;
+        public static List<Item> InventoryItems =>
+            LokiPoe.InstanceInfo.GetPlayerInventoryItemsBySlot(InventorySlot.Main);
+
+        public static int AvailableInventorySquares => LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.Main)
+            .AvailableInventorySquares;
+
+
+        public static bool HasItem(string[] strList)
+        {
+            return strList.All(HasItem);
+        }
+
+        public static bool HasItem(string str)
+        {
+            return InventoryItems.Exists(x => x.Name == str || x.Metadata.Contains(str));
+        }
+
         public static async Task<bool> OpenStash()
         {
             if (StashUi.IsOpened)
@@ -41,6 +57,7 @@ namespace FollowBot.SimpleEXtensions
                     GlobalLog.Error("[OpenStash] Fail to find any Stash nearby.");
                     return false;
                 }
+
                 stashPos = stashObj.WalkablePosition();
             }
 
@@ -48,7 +65,8 @@ namespace FollowBot.SimpleEXtensions
 
             await stashPos.ComeAtOnce(35);
 
-            if (!await PlayerAction.Interact(LokiPoe.ObjectManager.Stash, () => StashUi.IsOpened && StashUi.StashTabInfo != null, "stash opening"))
+            if (!await PlayerAction.Interact(LokiPoe.ObjectManager.Stash,
+                    () => StashUi.IsOpened && StashUi.StashTabInfo != null, "stash opening"))
                 return false;
 
             await Wait.SleepSafe(LokiPoe.Random.Next(200, 400));
@@ -58,12 +76,13 @@ namespace FollowBot.SimpleEXtensions
 
         public static async Task<bool> OpenInventory()
         {
-            if (InventoryUi.IsOpened && !LokiPoe.InGameState.PurchaseUi.IsOpened && !LokiPoe.InGameState.SellUi.IsOpened)
+            if (InventoryUi.IsOpened && !LokiPoe.InGameState.PurchaseUi.IsOpened &&
+                !LokiPoe.InGameState.SellUi.IsOpened)
                 return true;
 
             await Coroutines.CloseBlockingWindows();
 
-            LokiPoe.Input.SimulateKeyEvent(LokiPoe.Input.Binding.open_inventory_panel, true, false, false);
+            LokiPoe.Input.SimulateKeyEvent(LokiPoe.Input.Binding.open_inventory_panel);
 
             if (!await Wait.For(() => InventoryUi.IsOpened, "inventory panel opening"))
                 return false;
@@ -96,13 +115,15 @@ namespace FollowBot.SimpleEXtensions
                     GlobalLog.Error("[PlaceItemFromCursor] Destination item is null.");
                     return false;
                 }
-                int destItemId = destItem.LocalId;
+
+                var destItemId = destItem.LocalId;
                 var applied = inventory.ApplyCursorTo(destItem.LocalId);
                 if (applied != ApplyCursorResult.None)
                 {
                     GlobalLog.Error($"[PlaceItemFromCursor] Fail to place item from cursor. Error: \"{applied}\".");
                     return false;
                 }
+
                 //wait for destination item change, it cannot become null, ID should change
                 return await Wait.For(() =>
                 {
@@ -112,7 +133,7 @@ namespace FollowBot.SimpleEXtensions
             }
 
             //in other cases, place item to empty inventory slot or swap it with another item
-            int cursorItemId = cursorItem.LocalId;
+            var cursorItemId = cursorItem.LocalId;
             var placed = inventory.PlaceCursorInto(pos.X, pos.Y, true);
             if (placed != PlaceCursorIntoResult.None)
             {
@@ -122,10 +143,10 @@ namespace FollowBot.SimpleEXtensions
 
             //wait for cursor item change, if we placed - it should become null, if we swapped - ID should change
             if (!await Wait.For(() =>
-            {
-                var item = Cursor.Item;
-                return item == null || item.LocalId != cursorItemId;
-            }, "cursor item change")) return false;
+                {
+                    var item = Cursor.Item;
+                    return item == null || item.LocalId != cursorItemId;
+                }, "cursor item change")) return false;
 
             await Wait.ArtificialDelay();
 

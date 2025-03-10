@@ -193,7 +193,6 @@ namespace FollowBot.SimpleEXtensions
         [CanBeNull]
         public static T Random<T>(this IEnumerable collection, Func<T, bool> match) where T : NetworkObject
         {
-            T closest = null;
             List<T> list = new List<T>();
             foreach (var element in collection)
             {

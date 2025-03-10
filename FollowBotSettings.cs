@@ -4,7 +4,9 @@ using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.GameData;
 using DreamPoeBot.Loki.Game.Objects;
 using FollowBot.Class;
+using FollowBot.Helpers;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -14,8 +16,26 @@ namespace FollowBot
 {
     public class FollowBotSettings : JsonSettings
     {
+        public enum BloodAndSand
+        {
+            Blood,
+            Sand
+        }
+
         private static FollowBotSettings _instance;
-        public static FollowBotSettings Instance => _instance ?? (_instance = new FollowBotSettings());
+
+        private string _acceptedManualInviteNames;
+
+        private bool _enableQuestHelper;
+        private int _followDistance;
+
+        private bool _ignoreHiddenAuras;
+        private int _maxCombatDistance;
+        private int _maxfollowDistance;
+        private int _maxLootDistance;
+        public int _portOutThreshold;
+
+        private InteractBanditChoise _selectedBanditChoise;
 
         private FollowBotSettings()
             : base(GetSettingsFilePath(Configuration.Instance.Name, "FollowBot.json"))
@@ -26,24 +46,125 @@ namespace FollowBot
                 Flasks = SetupDefaultFlasks();
         }
 
-        private bool _ignoreHiddenAuras;
+        public Array BanditChoices { get; } = Enum.GetValues(typeof(InteractBanditChoise));
+
+        public static FollowBotSettings Instance => _instance ?? (_instance = new FollowBotSettings());
 
         [DefaultValue(false)]
         public bool IgnoreHiddenAuras
         {
-            get { return _ignoreHiddenAuras; }
+            get => _ignoreHiddenAuras;
             set
-            { _ignoreHiddenAuras = value; NotifyPropertyChanged(() => IgnoreHiddenAuras); }
+            {
+                _ignoreHiddenAuras = value;
+                NotifyPropertyChanged(() => IgnoreHiddenAuras);
+            }
         }
 
-        private string _acceptedManualInviteNames;
-        private int _followDistance;
-        private int _maxfollowDistance;
-        private int _maxCombatDistance;
-        private int _maxLootDistance;
-        public int _portOutThreshold;
+        [DefaultValue(false)]
+        public bool EnableQuestHelper
+        {
+            get => _enableQuestHelper;
+            set
+            {
+                _enableQuestHelper = value;
+                NotifyPropertyChanged(() => EnableQuestHelper);
+            }
+        }
+
+        [DefaultValue(InteractBanditChoise.KillAllBandits)]
+        public InteractBanditChoise SelectedBanditChoise
+        {
+            get => _selectedBanditChoise;
+            set
+            {
+                _selectedBanditChoise = value;
+                NotifyPropertyChanged(() => SelectedBanditChoise);
+            }
+        }
+
+        [DefaultValue("")]
+        public string InviteWhiteList
+        {
+            get => _acceptedManualInviteNames;
+            set
+            {
+                _acceptedManualInviteNames = value;
+                NotifyPropertyChanged(() => InviteWhiteList);
+            }
+        }
+
+        [DefaultValue(15)]
+        public int FollowDistance
+        {
+            get => _followDistance;
+            set
+            {
+                _followDistance = value;
+                NotifyPropertyChanged(() => FollowDistance);
+            }
+        }
+
+        [DefaultValue(25)]
+        public int MaxFollowDistance
+        {
+            get => _maxfollowDistance;
+            set
+            {
+                _maxfollowDistance = value;
+                NotifyPropertyChanged(() => MaxFollowDistance);
+            }
+        }
+
+        [DefaultValue(40)]
+        public int MaxCombatDistance
+        {
+            get => _maxCombatDistance;
+            set
+            {
+                _maxCombatDistance = value;
+                NotifyPropertyChanged(() => MaxCombatDistance);
+            }
+        }
+
+        [DefaultValue(40)]
+        public int MaxLootDistance
+        {
+            get => _maxLootDistance;
+            set
+            {
+                _maxLootDistance = value;
+                NotifyPropertyChanged(() => MaxLootDistance);
+            }
+        }
+
+        [DefaultValue(0)]
+        public int PortOutThreshold
+        {
+            get => _portOutThreshold;
+            set
+            {
+                _portOutThreshold = value;
+                NotifyPropertyChanged(() => PortOutThreshold);
+            }
+        }
+
+        #region Defence Skills
+
+        public ObservableCollection<DefensiveSkillsClass> DefensiveSkills
+        {
+            get => _defensiveSkills; //?? (_defensiveSkills = new ObservableCollection<DefensiveSkillsClass>());
+            set
+            {
+                _defensiveSkills = value;
+                NotifyPropertyChanged(() => DefensiveSkills);
+            }
+        }
+
+        #endregion
 
         #region Party Role
+
         private bool _shouldKill;
         private bool _shouldLoot;
         private bool _shouldLootOnlyQuestItem;
@@ -54,60 +175,54 @@ namespace FollowBot
         #endregion
 
         #region Aureas
+
         private bool _enableAspectsOfTheAvian;
         private bool _enableAspectsOfTheCat;
         private bool _enableAspectsOfTheCrab;
         private bool _enableAspectsOfTheSpider;
         private BloodAndSand _bloodOrSand;
+
         #endregion
 
         #region Auras
+
         [DefaultValue(false)]
         public bool EnableAspectsOfTheAvian
         {
-            get
-            {
-                return _enableAspectsOfTheAvian;
-            }
+            get => _enableAspectsOfTheAvian;
             set
             {
                 _enableAspectsOfTheAvian = value;
                 NotifyPropertyChanged(() => EnableAspectsOfTheAvian);
             }
         }
+
         [DefaultValue(false)]
         public bool EnableAspectsOfTheCat
         {
-            get
-            {
-                return _enableAspectsOfTheCat;
-            }
+            get => _enableAspectsOfTheCat;
             set
             {
                 _enableAspectsOfTheCat = value;
                 NotifyPropertyChanged(() => EnableAspectsOfTheCat);
             }
         }
+
         [DefaultValue(false)]
         public bool EnableAspectsOfTheCrab
         {
-            get
-            {
-                return _enableAspectsOfTheCrab;
-            }
+            get => _enableAspectsOfTheCrab;
             set
             {
                 _enableAspectsOfTheCrab = value;
                 NotifyPropertyChanged(() => EnableAspectsOfTheCrab);
             }
         }
+
         [DefaultValue(false)]
         public bool EnableAspectsOfTheSpider
         {
-            get
-            {
-                return _enableAspectsOfTheSpider;
-            }
+            get => _enableAspectsOfTheSpider;
             set
             {
                 _enableAspectsOfTheSpider = value;
@@ -118,10 +233,7 @@ namespace FollowBot
         [DefaultValue(BloodAndSand.Sand)]
         public BloodAndSand BloorOrSand
         {
-            get
-            {
-                return _bloodOrSand;
-            }
+            get => _bloodOrSand;
             set
             {
                 _bloodOrSand = value;
@@ -132,11 +244,14 @@ namespace FollowBot
         #endregion
 
         #region Defence
+
         private ObservableCollection<DefensiveSkillsClass> _defensiveSkills;
         private ObservableCollection<FlasksClass> _flasks;
+
         #endregion
 
         #region Gems
+
         private bool _gemDebugStatements;
         private bool _levelAllGems;
         private bool _levelOffhandOnly;
@@ -144,139 +259,91 @@ namespace FollowBot
 
         #endregion
 
-        [DefaultValue("")]
-        public string InviteWhiteList
-        {
-            get { return _acceptedManualInviteNames; }
-            set
-            { _acceptedManualInviteNames = value; NotifyPropertyChanged(() => InviteWhiteList); }
-        }
-        [DefaultValue(15)]
-        public int FollowDistance
-        {
-            get { return _followDistance; }
-            set
-            { _followDistance = value; NotifyPropertyChanged(() => FollowDistance); }
-        }
-        [DefaultValue(25)]
-        public int MaxFollowDistance
-        {
-            get { return _maxfollowDistance; }
-            set
-            { _maxfollowDistance = value; NotifyPropertyChanged(() => MaxFollowDistance); }
-        }
-        [DefaultValue(40)]
-        public int MaxCombatDistance
-        {
-            get { return _maxCombatDistance; }
-            set
-            { _maxCombatDistance = value; NotifyPropertyChanged(() => MaxCombatDistance); }
-        }
-        [DefaultValue(40)]
-        public int MaxLootDistance
-        {
-            get { return _maxLootDistance; }
-            set
-            { _maxLootDistance = value; NotifyPropertyChanged(() => MaxLootDistance); }
-        }
-
-
-        [DefaultValue(0)]
-        public int PortOutThreshold
-        {
-            get { return _portOutThreshold; }
-            set
-            {
-                _portOutThreshold = value;
-                NotifyPropertyChanged(() => PortOutThreshold);
-            }
-        }
-
         #region Party Role
 
         [DefaultValue(true)]
         public bool ShouldKill
         {
-            get { return _shouldKill; }
+            get => _shouldKill;
             set
-            { _shouldKill = value; NotifyPropertyChanged(() => ShouldKill); }
+            {
+                _shouldKill = value;
+                NotifyPropertyChanged(() => ShouldKill);
+            }
         }
+
         [DefaultValue(false)]
         public bool ShouldLoot
         {
-            get { return _shouldLoot; }
+            get => _shouldLoot;
             set
-            { _shouldLoot = value; NotifyPropertyChanged(() => ShouldLoot); }
+            {
+                _shouldLoot = value;
+                NotifyPropertyChanged(() => ShouldLoot);
+            }
         }
+
         [DefaultValue(false)]
         public bool ShouldLootOnlyQuestItem
         {
-            get { return _shouldLootOnlyQuestItem; }
+            get => _shouldLootOnlyQuestItem;
             set
             {
-                _shouldLootOnlyQuestItem = value; NotifyPropertyChanged(() => ShouldLootOnlyQuestItem);
-            }
-        }
-        private bool _interactQuest;
-        [DefaultValue(false)]
-        public bool InteractQuest
-        {
-            get { return _interactQuest; }
-            set
-            {
-                _interactQuest = value; NotifyPropertyChanged(() => InteractQuest);
+                _shouldLootOnlyQuestItem = value;
+                NotifyPropertyChanged(() => ShouldLootOnlyQuestItem);
             }
         }
 
         [DefaultValue(false)]
         public bool UseStalkerSentinel
         {
-            get { return _useStalkerSentinel; }
+            get => _useStalkerSentinel;
             set
-            { _useStalkerSentinel = value; NotifyPropertyChanged(() => UseStalkerSentinel); }
+            {
+                _useStalkerSentinel = value;
+                NotifyPropertyChanged(() => UseStalkerSentinel);
+            }
         }
+
         [DefaultValue(false)]
         public bool DontPortOutofMap
         {
-            get { return _dontPortOutofMap; }
+            get => _dontPortOutofMap;
             set
-            { _dontPortOutofMap = value; NotifyPropertyChanged(() => DontPortOutofMap); }
+            {
+                _dontPortOutofMap = value;
+                NotifyPropertyChanged(() => DontPortOutofMap);
+            }
         }
+
         [JsonIgnore]
         public bool ShouldFollow
         {
-            get { return _shouldFollow; }
-            set
-            { _shouldFollow = value; NotifyPropertyChanged(() => ShouldFollow); }
-        }
-        #endregion
-
-        #region Defence Skills
-        public ObservableCollection<DefensiveSkillsClass> DefensiveSkills
-        {
-            get => _defensiveSkills;//?? (_defensiveSkills = new ObservableCollection<DefensiveSkillsClass>());
+            get => _shouldFollow;
             set
             {
-                _defensiveSkills = value;
-                NotifyPropertyChanged(() => DefensiveSkills);
+                _shouldFollow = value;
+                NotifyPropertyChanged(() => ShouldFollow);
             }
         }
 
         #endregion
 
         #region Flasks
+
         public ObservableCollection<FlasksClass> Flasks
         {
-            get => _flasks;//?? (_flasks = new ObservableCollection<FlasksClass>());
+            get => _flasks; //?? (_flasks = new ObservableCollection<FlasksClass>());
             set
             {
                 _flasks = value;
                 NotifyPropertyChanged(() => Flasks);
             }
         }
+
         private ObservableCollection<DefensiveSkillsClass> SetupDefaultDefensiveSkills()
         {
-            ObservableCollection<DefensiveSkillsClass> skills = new ObservableCollection<DefensiveSkillsClass>();
+            var skills = new ObservableCollection<DefensiveSkillsClass>();
 
             skills.Add(new DefensiveSkillsClass(false, "Vaal Molten Shell", false, 0, 0, false, ""));
             skills.Add(new DefensiveSkillsClass(false, "Vaal Discipline", false, 0, 0, false, ""));
@@ -284,9 +351,10 @@ namespace FollowBot
             skills.Add(new DefensiveSkillsClass(false, "Steelskin", false, 0, 0, false, ""));
             return skills;
         }
+
         private ObservableCollection<FlasksClass> SetupDefaultFlasks()
         {
-            ObservableCollection<FlasksClass> flasks = new ObservableCollection<FlasksClass>();
+            var flasks = new ObservableCollection<FlasksClass>();
 
             flasks.Add(new FlasksClass(false, 1, false, false, 0, 0, false));
             flasks.Add(new FlasksClass(false, 2, false, false, 0, 0, false));
@@ -299,129 +367,97 @@ namespace FollowBot
         #endregion
 
         #region SkillGems
+
         /// <summary>
-		/// Should the plugin log debug statements?
-		/// </summary>
-		[DefaultValue(false)]
+        ///     Should the plugin log debug statements?
+        /// </summary>
+        [DefaultValue(false)]
         public bool GemDebugStatements
         {
-            get
-            {
-                return _gemDebugStatements;
-            }
+            get => _gemDebugStatements;
             set
             {
-                if (value.Equals(_gemDebugStatements))
-                {
-                    return;
-                }
+                if (value.Equals(_gemDebugStatements)) return;
                 _gemDebugStatements = value;
                 NotifyPropertyChanged(() => GemDebugStatements);
             }
         }
+
         [DefaultValue(false)]
         public bool LevelOffhandOnly
         {
-            get
-            {
-                return _levelOffhandOnly;
-            }
+            get => _levelOffhandOnly;
             set
             {
-                if (value.Equals(_levelOffhandOnly))
-                {
-                    return;
-                }
+                if (value.Equals(_levelOffhandOnly)) return;
                 _levelOffhandOnly = value;
                 NotifyPropertyChanged(() => LevelOffhandOnly);
             }
         }
+
         [DefaultValue(false)]
         public bool LevelAllGems
         {
-            get
-            {
-                return _levelAllGems;
-            }
+            get => _levelAllGems;
             set
             {
-                if (value.Equals(_levelAllGems))
-                {
-                    return;
-                }
+                if (value.Equals(_levelAllGems)) return;
                 _levelAllGems = value;
                 NotifyPropertyChanged(() => LevelAllGems);
             }
         }
+
         /// <summary>
-		/// A list of skillgem names to ignore from leveling.
-		/// </summary>
-		public ObservableCollection<string> GlobalNameIgnoreList
+        ///     A list of skillgem names to ignore from leveling.
+        /// </summary>
+        public ObservableCollection<string> GlobalNameIgnoreList
         {
-            get
-            {
-                return _globalNameIgnoreList ?? (_globalNameIgnoreList = new ObservableCollection<string>());
-            }
+            get => _globalNameIgnoreList ?? (_globalNameIgnoreList = new ObservableCollection<string>());
             set
             {
-                if (value.Equals(_globalNameIgnoreList))
-                {
-                    return;
-                }
+                if (value.Equals(_globalNameIgnoreList)) return;
                 _globalNameIgnoreList = value;
                 NotifyPropertyChanged(() => GlobalNameIgnoreList);
             }
         }
 
         /// <summary>
-		/// A list of SkillGemEntry for the user's skillgems.
-		/// </summary>
-		[JsonIgnore]
+        ///     A list of SkillGemEntry for the user's skillgems.
+        /// </summary>
+        [JsonIgnore]
         public ObservableCollection<SkillGemEntry> UserSkillGemsInOffHands
         {
             get
             {
                 //using (LokiPoe.AcquireFrame())
                 //{
-                ObservableCollection<SkillGemEntry> skillGemEntries = new ObservableCollection<SkillGemEntry>();
+                var skillGemEntries = new ObservableCollection<SkillGemEntry>();
 
-                if (!LokiPoe.IsInGame)
-                {
-                    return skillGemEntries;
-                }
+                if (!LokiPoe.IsInGame) return skillGemEntries;
 
-                foreach (Inventory inv in UsableOffInventories)
-                {
-                    foreach (Item item in inv.Items)
+                foreach (var inv in UsableOffInventories)
+                    foreach (var item in inv.Items)
                     {
-                        if (item == null)
-                        {
-                            continue;
-                        }
+                        if (item == null) continue;
 
-                        if (item.Components.SocketsComponent == null)
-                        {
-                            continue;
-                        }
+                        if (item.Components.SocketsComponent == null) continue;
 
-                        for (int idx = 0; idx < item.SocketedGems.Length; idx++)
+                        for (var idx = 0; idx < item.SocketedGems.Length; idx++)
                         {
-                            Item gem = item.SocketedGems[idx];
-                            if (gem == null)
-                            {
-                                continue;
-                            }
+                            var gem = item.SocketedGems[idx];
+                            if (gem == null) continue;
 
                             skillGemEntries.Add(new SkillGemEntry(gem.Name, inv.PageSlot, idx));
                         }
                     }
-                }
+
                 return skillGemEntries;
                 //}
             }
         }
+
         /// <summary>
-        /// A list of SkillGemEntry for the user's skillgems.
+        ///     A list of SkillGemEntry for the user's skillgems.
         /// </summary>
         [JsonIgnore]
         public ObservableCollection<SkillGemEntry> UserSkillGems
@@ -430,54 +466,41 @@ namespace FollowBot
             {
                 //using (LokiPoe.AcquireFrame())
                 //{
-                ObservableCollection<SkillGemEntry> skillGemEntries = new ObservableCollection<SkillGemEntry>();
+                var skillGemEntries = new ObservableCollection<SkillGemEntry>();
 
-                if (!LokiPoe.IsInGame)
-                {
-                    return skillGemEntries;
-                }
+                if (!LokiPoe.IsInGame) return skillGemEntries;
 
-                foreach (Inventory inv in UsableInventories)
-                {
-                    foreach (Item item in inv.Items)
+                foreach (var inv in UsableInventories)
+                    foreach (var item in inv.Items)
                     {
-                        if (item == null)
-                        {
-                            continue;
-                        }
+                        if (item == null) continue;
 
-                        if (item.Components.SocketsComponent == null)
-                        {
-                            continue;
-                        }
+                        if (item.Components.SocketsComponent == null) continue;
 
-                        for (int idx = 0; idx < item.SocketedGems.Length; idx++)
+                        for (var idx = 0; idx < item.SocketedGems.Length; idx++)
                         {
-                            Item gem = item.SocketedGems[idx];
-                            if (gem == null)
-                            {
-                                continue;
-                            }
+                            var gem = item.SocketedGems[idx];
+                            if (gem == null) continue;
 
                             skillGemEntries.Add(new SkillGemEntry(gem.Name, inv.PageSlot, idx));
                         }
                     }
-                }
+
                 return skillGemEntries;
                 //}
             }
         }
+
         public void UpdateGlobalNameIgnoreList()
         {
             NotifyPropertyChanged(() => GlobalNameIgnoreList);
         }
+
         public class SkillGemEntry
         {
-            public string Name;
             public InventorySlot InventorySlot;
+            public string Name;
             public int SocketIndex;
-
-            public string SerializationString { get; private set; }
 
             public SkillGemEntry(string name, InventorySlot slot, int socketIndex)
             {
@@ -486,6 +509,8 @@ namespace FollowBot
                 SocketIndex = socketIndex;
                 SerializationString = string.Format("{0} [{1}: {2}]", Name, InventorySlot, SocketIndex);
             }
+
+            public string SerializationString { get; private set; }
 
             public Item InventoryItem
             {
@@ -501,27 +526,19 @@ namespace FollowBot
             {
                 get
                 {
-                    Item item = InventoryItem;
-                    if (item == null || item.Components.SocketsComponent == null)
-                    {
-                        return null;
-                    }
+                    var item = InventoryItem;
+                    if (item == null || item.Components.SocketsComponent == null) return null;
 
-                    Item sg = item.SocketedGems[SocketIndex];
-                    if (sg == null)
-                    {
-                        return null;
-                    }
+                    var sg = item.SocketedGems[SocketIndex];
+                    if (sg == null) return null;
 
-                    if (sg.Name != Name)
-                    {
-                        return null;
-                    }
+                    if (sg.Name != Name) return null;
 
                     return sg;
                 }
             }
         }
+
         private static IEnumerable<Inventory> UsableInventories => new[]
         {
             LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.LeftHand),
@@ -536,11 +553,13 @@ namespace FollowBot
             LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.RightRing),
             LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.Neck)
         };
+
         private static IEnumerable<Inventory> UsableOffInventories => new[]
         {
             LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.OffLeftHand),
-            LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.OffRightHand),
+            LokiPoe.InstanceInfo.GetPlayerInventoryBySlot(InventorySlot.OffRightHand)
         };
+
         #endregion
 
         #region ChatCommands
@@ -561,10 +580,7 @@ namespace FollowBot
         [DefaultValue("Tele")]
         public string TeleportToLeaderChatCommand
         {
-            get
-            {
-                return _TeleportToLeaderChatCommand;
-            }
+            get => _TeleportToLeaderChatCommand;
             set
             {
                 _TeleportToLeaderChatCommand = value;
@@ -575,10 +591,7 @@ namespace FollowBot
         [DefaultValue("StopF")]
         public string StopFollowChatCommand
         {
-            get
-            {
-                return _stopFollowChatCommand;
-            }
+            get => _stopFollowChatCommand;
             set
             {
                 _stopFollowChatCommand = value;
@@ -589,10 +602,7 @@ namespace FollowBot
         [DefaultValue("StartF")]
         public string StartFollowChatCommand
         {
-            get
-            {
-                return _startFollowChatCommand;
-            }
+            get => _startFollowChatCommand;
             set
             {
                 _startFollowChatCommand = value;
@@ -603,10 +613,7 @@ namespace FollowBot
         [DefaultValue("StopL")]
         public string StopLootChatCommand
         {
-            get
-            {
-                return _stopLootChatCommand;
-            }
+            get => _stopLootChatCommand;
             set
             {
                 _stopLootChatCommand = value;
@@ -617,10 +624,7 @@ namespace FollowBot
         [DefaultValue("StartL")]
         public string StartLootChatCommand
         {
-            get
-            {
-                return _startLootChatCommand;
-            }
+            get => _startLootChatCommand;
             set
             {
                 _startLootChatCommand = value;
@@ -631,10 +635,7 @@ namespace FollowBot
         [DefaultValue("StopA")]
         public string StopAttackChatCommand
         {
-            get
-            {
-                return _stopAttackChatCommand;
-            }
+            get => _stopAttackChatCommand;
             set
             {
                 _stopAttackChatCommand = value;
@@ -645,10 +646,7 @@ namespace FollowBot
         [DefaultValue("StartA")]
         public string StartAttackChatCommand
         {
-            get
-            {
-                return _startAttackChatCommand;
-            }
+            get => _startAttackChatCommand;
             set
             {
                 _startAttackChatCommand = value;
@@ -659,10 +657,7 @@ namespace FollowBot
         [DefaultValue("StopD")]
         public string StopSentinelChatCommand
         {
-            get
-            {
-                return _stopSentinelChatCommand;
-            }
+            get => _stopSentinelChatCommand;
             set
             {
                 _stopSentinelChatCommand = value;
@@ -673,10 +668,7 @@ namespace FollowBot
         [DefaultValue("StartD")]
         public string StartSentinelChatCommand
         {
-            get
-            {
-                return _startSentinelChatCommand;
-            }
+            get => _startSentinelChatCommand;
             set
             {
                 _startSentinelChatCommand = value;
@@ -687,10 +679,7 @@ namespace FollowBot
         [DefaultValue("StopP")]
         public string StopAutoTeleportChatCommand
         {
-            get
-            {
-                return _stopAutoTeleportChatCommand;
-            }
+            get => _stopAutoTeleportChatCommand;
             set
             {
                 _stopAutoTeleportChatCommand = value;
@@ -701,10 +690,7 @@ namespace FollowBot
         [DefaultValue("StartP")]
         public string StartAutoTeleportChatCommand
         {
-            get
-            {
-                return _startAutoTeleportChatCommand;
-            }
+            get => _startAutoTeleportChatCommand;
             set
             {
                 _startAutoTeleportChatCommand = value;
@@ -715,7 +701,7 @@ namespace FollowBot
         [DefaultValue("OpenP")]
         public string OpenTownPortalChatCommand
         {
-            get { return _openTownPortalChatCommand; }
+            get => _openTownPortalChatCommand;
             set
             {
                 _openTownPortalChatCommand = value;
@@ -747,6 +733,7 @@ namespace FollowBot
                 NotifyPropertyChanged(() => EnableOverlay);
             }
         }
+
         [DefaultValue(false)]
         public bool DrawInBackground
         {
@@ -758,6 +745,7 @@ namespace FollowBot
                 NotifyPropertyChanged(() => DrawInBackground);
             }
         }
+
         [DefaultValue(false)]
         public bool DrawMobs
         {
@@ -769,6 +757,7 @@ namespace FollowBot
                 NotifyPropertyChanged(() => DrawMobs);
             }
         }
+
         [DefaultValue(false)]
         public bool DrawCorpses
         {
@@ -834,12 +823,5 @@ namespace FollowBot
         }
 
         #endregion
-
-        public enum BloodAndSand
-        {
-            Blood,
-            Sand
-        }
     }
 }
-

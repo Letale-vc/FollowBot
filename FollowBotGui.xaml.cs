@@ -65,7 +65,7 @@ namespace FollowBot
         }
         private void GlobalNameIgnoreListListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (e != null && e.AddedItems.Count > 0)
+            if (e?.AddedItems.Count > 0)
             {
                 GlobalNameIgnoreTextBox.Text = e.AddedItems[0].ToString();
             }
@@ -81,12 +81,10 @@ namespace FollowBot
 
         private void CheckBox_Checked(object sender, RoutedEventArgs e)
         {
-
         }
 
         private void CheckBox_Checked_1(object sender, RoutedEventArgs e)
         {
-
         }
     }
 }

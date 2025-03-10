@@ -1,61 +1,62 @@
-﻿using DreamPoeBot.Loki.Bot;
+﻿using System;
+using System.Threading.Tasks;
+using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Common;
 using DreamPoeBot.Loki.Game;
+using DreamPoeBot.Loki.Game.GameData;
 using FollowBot.Helpers;
 using log4net;
-using System.Linq;
-using System.Threading.Tasks;
-
 
 namespace FollowBot.Tasks
 {
-    class JoinPartyTask : ITask
+    internal class JoinPartyTask : ITask
     {
         private readonly ILog Log = Logger.GetLoggerInstanceForType();
 
-        public string Name { get { return "JoinPartyTask"; } }
-        public string Description { get { return "This task will ask for party."; } }
-        public string Author { get { return "NotYourFriend, origial code from Unknown"; } }
-        public string Version { get { return "0.0.0.1"; } }
+        public async Task<bool> Run()
+        {
+            var partyStatus = LokiPoe.Me.PartyStatus;
+            switch (partyStatus)
+            {
+                case PartyStatus.PartyMember:
+                    return false;
+                case PartyStatus.PartyLeader:
+                    await PartyHelper.LeaveParty();
+                    return true;
+                case PartyStatus.None:
+                case PartyStatus.Invited:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
+            var invite = LokiPoe.InstanceInfo.PendingPartyInvites;
+            if (invite.Count == 0) return false;
+            Log.DebugFormat("[JoinPartyTask] Found party invite count: {0}", invite.Count);
+            await PartyHelper.HandlePartyInviteNew();
+            return partyStatus != PartyStatus.None;
+        }
+
+        #region skip
+
+        public string Name => "JoinPartyTask";
+        public string Description => "This task will ask for party.";
+        public string Author => "NotYourFriend, origial code from Unknown";
+        public string Version => "0.0.0.1";
 
         public void Start()
         {
             Log.InfoFormat("[{0}] Task Loaded.", Name);
         }
+
         public void Stop()
         {
-
         }
+
         public void Tick()
         {
-
         }
 
-        public async Task<bool> Run()
-        {
-            if (LokiPoe.InstanceInfo.PartyStatus == DreamPoeBot.Loki.Game.GameData.PartyStatus.PartyMember)
-            {
-                return false;
-            }
-            if (LokiPoe.InstanceInfo.PartyStatus == DreamPoeBot.Loki.Game.GameData.PartyStatus.PartyLeader)
-            {
-                await PartyHelper.LeaveParty();
-                return true;
-            }
-
-            var invite = LokiPoe.InstanceInfo.PendingPartyInvites;
-            if (invite.Any())
-            {
-                await PartyHelper.HandlePartyInvite();
-            }
-            else if (LokiPoe.InstanceInfo.PartyStatus == DreamPoeBot.Loki.Game.GameData.PartyStatus.None)
-            {
-                return true;
-            }
-
-            return true;
-        }
         public Task<LogicResult> Logic(Logic logic)
         {
             return Task.FromResult(LogicResult.Unprovided);
@@ -65,5 +66,7 @@ namespace FollowBot.Tasks
         {
             return MessageResult.Unprocessed;
         }
+
+        #endregion
     }
 }

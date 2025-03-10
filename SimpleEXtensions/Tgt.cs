@@ -16,7 +16,8 @@ namespace FollowBot.SimpleEXtensions
                 for (int j = 0; j < tgtEntries.GetLength(1); j++)
                 {
                     var entry = tgtEntries[i, j];
-                    if (entry == null) continue;
+                    if (entry == null)
+                        continue;
                     if (regex.IsMatch(entry.TgtName))
                     {
                         return new WorldPosition(i * 23, j * 23);
@@ -36,7 +37,8 @@ namespace FollowBot.SimpleEXtensions
                 for (int j = 0; j < tgtEntries.GetLength(1); j++)
                 {
                     var entry = tgtEntries[i, j];
-                    if (entry == null) continue;
+                    if (entry == null)
+                        continue;
                     if (regex.IsMatch(entry.TgtName))
                     {
                         positions.Add(new WorldPosition(i * 23, j * 23));
@@ -55,7 +57,8 @@ namespace FollowBot.SimpleEXtensions
                 for (int j = 0; j < tgtEntries.GetLength(1); j++)
                 {
                     var entry = tgtEntries[i, j];
-                    if (entry == null) continue;
+                    if (entry == null)
+                        continue;
 
                     var name = entry.TgtName;
                     if (name.ContainsIgnorecase("waypoint") && !name.Contains("waypoint_broken"))
@@ -71,7 +74,8 @@ namespace FollowBot.SimpleEXtensions
             }
             foreach (var pos in positions)
             {
-                if (pos.PathExists) return pos;
+                if (pos.PathExists)
+                    return pos;
             }
             return positions[0].GetWalkable(10, 20);
         }

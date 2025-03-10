@@ -1,27 +1,29 @@
 ﻿using JetBrains.Annotations;
+using Newtonsoft.Json;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json;
 
 namespace FollowBot.Class
 {
     public class FlasksClass : INotifyPropertyChanged
     {
-        private int _slot;
+        [JsonIgnore] public readonly Stopwatch PostUseDelay = Stopwatch.StartNew();
+
+        private int _cooldown;
         private bool _enabled;
+        private bool _ignoreEffect;
+        private int _slot;
+        private int _threshold;
         private bool _useEs;
         private bool _useMana;
-        private int _threshold;
-        private int _cooldown;
-        private bool _ignoreEffect;
 
         public FlasksClass()
         {
-            
         }
 
-        public FlasksClass(bool enabled, int slot, bool useEs, bool useMana, int threshold, int cooldown, bool ignoreEffect)
+        public FlasksClass(bool enabled, int slot, bool useEs, bool useMana, int threshold, int cooldown,
+            bool ignoreEffect)
         {
             Enabled = enabled;
             Slot = slot;
@@ -34,71 +36,73 @@ namespace FollowBot.Class
 
         public int Slot
         {
-            get { return _slot; }
+            get => _slot;
             set
             {
                 _slot = value;
-                NotifyPropertyChanged(nameof(Slot));
+                NotifyPropertyChanged();
             }
         }
+
         public bool Enabled
         {
-            get { return _enabled; }
+            get => _enabled;
             set
             {
                 _enabled = value;
-                NotifyPropertyChanged(nameof(Enabled));
+                NotifyPropertyChanged();
             }
         }
+
         public bool UseEs
         {
-            get { return _useEs; }
+            get => _useEs;
             set
             {
                 _useEs = value;
-                NotifyPropertyChanged(nameof(UseEs));
+                NotifyPropertyChanged();
             }
         }
+
         public bool UseMana
         {
-            get { return _useMana; }
+            get => _useMana;
             set
             {
                 _useMana = value;
-                NotifyPropertyChanged(nameof(UseMana));
+                NotifyPropertyChanged();
             }
         }
+
         public int Threshold
         {
-            get { return _threshold; }
+            get => _threshold;
             set
             {
                 _threshold = value;
-                NotifyPropertyChanged(nameof(Threshold));
+                NotifyPropertyChanged();
             }
         }
+
         public int Cooldown
         {
-            get { return _cooldown; }
+            get => _cooldown;
             set
             {
                 _cooldown = value;
-                NotifyPropertyChanged(nameof(Cooldown));
+                NotifyPropertyChanged();
             }
         }
 
         public bool IgnoreEffect
         {
-            get { return _ignoreEffect;}
+            get => _ignoreEffect;
             set
             {
                 _ignoreEffect = value;
-                NotifyPropertyChanged(nameof(IgnoreEffect));
+                NotifyPropertyChanged();
             }
         }
-
-        [JsonIgnore]
-        public readonly Stopwatch PostUseDelay = Stopwatch.StartNew();
 
         public event PropertyChangedEventHandler PropertyChanged;
 

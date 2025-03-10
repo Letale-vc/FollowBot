@@ -1,14 +1,13 @@
-﻿using DreamPoeBot.Loki.Bot;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Game;
 using DreamPoeBot.Loki.Game.NativeWrappers;
 using DreamPoeBot.Loki.Game.Objects;
-using DreamPoeBot.Loki.RemoteMemoryObjects;
 using FollowBot.Class;
 using FollowBot.Helpers;
 using FollowBot.SimpleEXtensions;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using FlaskHud = DreamPoeBot.Loki.Game.LokiPoe.InGameState.QuickFlaskHud;
 
 namespace FollowBot.Tasks
@@ -19,8 +18,9 @@ namespace FollowBot.Tasks
         public const string ManaFlaskEffect = "flask_effect_mana";
         public const string EnduringManaFlaskEffect = "flask_effect_mana_not_removed_when_full";
         public const string QsilverEffect = "flask_utility_sprint";
-        public static bool ShouldTeleport = false;
-        public static bool ShouldOpenPortal = false;
+        public static bool ShouldTeleport;
+        public static bool ShouldOpenPortal;
+
         private static readonly Dictionary<string, string> FlaskEffects = new Dictionary<string, string>
         {
             [FlaskNames.Diamond] = "flask_utility_critical_strike_chance",
@@ -64,9 +64,197 @@ namespace FollowBot.Tasks
             [FlaskNames.Rotgut] = " flask_utility_sprint",
             [FlaskNames.SoulCatcher] = "unique_flask_soul_catcher",
             [FlaskNames.DoedreElixir] = string.Empty,
-            [FlaskNames.WrithingJar] = string.Empty,
+            [FlaskNames.WrithingJar] = string.Empty
         };
+
         private static readonly Dictionary<string, int> LinkRotationDictionary = new Dictionary<string, int>();
+
+        public async Task<bool> Run()
+        {
+            if (!LokiPoe.IsInGame) return false;
+            if (ShouldTeleport)
+            {
+                ShouldTeleport = false;
+                if (FollowBot.LeaderPartyEntry != null && FollowBot.LeaderPartyEntry.PlayerEntry != null)
+                {
+                    var leadername = FollowBot.LeaderPartyEntry.PlayerEntry.Name;
+                    if (!string.IsNullOrEmpty(leadername)) await PartyHelper.FastGotoPartyZone(leadername);
+                }
+            }
+
+            if (ShouldOpenPortal)
+            {
+                if (!World.CurrentArea.IsTown && !World.CurrentArea.IsHideoutArea)
+                    await PlayerAction.CreateTownPortal();
+                ShouldOpenPortal = false;
+                return true;
+            }
+
+            if (LokiPoe.CurrentWorldArea.IsTown) return false;
+            if (LokiPoe.CurrentWorldArea.Id == "HeistHub") return false;
+            if (!LokiPoe.CurrentWorldArea.IsCombatArea) return false;
+
+            if (LokiPoe.Me.HasAura("Grace Period"))
+            {
+                GlobalLog.Debug("[DefenseAndFlaskTask] Find grace period, wait player moves.");
+                return false;
+                //await PlayerAction.MoveAway(15, 20);
+            }
+
+            var hpPct = LokiPoe.Me.HealthPercent;
+            var esPct = LokiPoe.Me.EnergyShieldPercent;
+            var manaPct = LokiPoe.Me.ManaPercent;
+
+            #region Flasks
+
+            foreach (var flask in FollowBotSettings.Instance.Flasks)
+            {
+                if (!flask.Enabled) continue;
+                var postUseDelay = flask.PostUseDelay.ElapsedMilliseconds;
+                if (postUseDelay < 100) continue;
+                if (postUseDelay < flask.Cooldown) continue;
+                var thisflask =
+                    FlaskHud.InventoryControl.Inventory.Items.FirstOrDefault(x =>
+                        x.LocationTopLeft.X == flask.Slot - 1);
+                if (thisflask == null) continue;
+                if (thisflask.Name == Class.FlaskNames.Quicksilver && LokiPoe.Me.HasAura(QsilverEffect) &&
+                    !flask.IgnoreEffect) continue;
+                if (!flask.IgnoreEffect && !thisflask.Components.FlaskComponent.IsInstantRecovery &&
+                    flask.PostUseDelay.ElapsedMilliseconds <
+                    thisflask.Components.FlaskComponent.RecoveryTime.TotalMilliseconds) continue;
+                if (!flask.IgnoreEffect && HasFlaskEffect(thisflask)) continue;
+                var threshold = flask.UseEs ? esPct : flask.UseMana ? manaPct : hpPct;
+                if (threshold < flask.Threshold)
+                    if (UseFlask(thisflask, flask.Slot))
+                    {
+                        flask.PostUseDelay.Restart();
+                        return true;
+                    }
+            }
+
+            #endregion
+
+            #region Defense
+
+            foreach (var skill in FollowBotSettings.Instance.DefensiveSkills)
+            {
+                if (!skill.Enabled) continue;
+                if (!skill.IsReadyToCast) continue;
+                var threshold = skill.UseEs ? esPct : hpPct;
+                if (threshold < skill.Threshold) CastDefensiveSkill(skill);
+            }
+
+            #endregion
+
+            return false;
+        }
+
+        private bool HasFlaskEffect(Item thisflask)
+        {
+            var name = thisflask.ProperName();
+            var effect = Flasks.GetEffect(name);
+            if (effect == null) return false;
+            return LokiPoe.Me.HasAura(effect);
+        }
+
+        private static void CastDefensiveSkill(DefensiveSkillsClass skillClass)
+        {
+            if (skillClass == null) return;
+            var skills = LokiPoe.InGameState.SkillBarHud.Skills;
+            if (skills == null) return;
+            var skill = skills.FirstOrDefault(s => s.Name == skillClass.Name && !SkillBlacklist.IsBlacklisted(s));
+            if (skill == null || !skill.CanUse()) return;
+            if (skillClass.CastOnLeader)
+            {
+                var leader = GetNextOnRotation(skillClass.LinkWhitelist); // FollowBot.Leader;
+                if (leader == null || !(leader.Distance < 50)) return;
+                LokiPoe.InGameState.SkillBarHud.UseAt(skill.Slot, false, leader.Position, false);
+            }
+            else
+            {
+                LokiPoe.InGameState.SkillBarHud.Use(skill.Slot, false, false);
+            }
+
+            skillClass.Casted();
+        }
+
+        private static bool UseFlask(Item thisflask, int slot)
+        {
+            if (!thisflask.CanUse) return false;
+            //if (thisflask.Name == FlaskNames.Quicksilver)
+            //{
+            //    if (LokiPoe.Me.HasAura(QsilverEffect)) return false;
+            //}
+            //string name = thisflask.ProperName();
+            //string effect = Flasks.GetEffect(name);
+            //if (effect != null)
+            //{
+            //    if (LokiPoe.Me.HasAura(effect)) return false;
+            //}
+
+            if (!FlaskHud.UseFlaskInSlot(slot)) return false;
+            return true;
+        }
+
+        private static Player GetNextOnRotation(string linkWhitelist)
+        {
+            List<PartyMember> party;
+            if (string.IsNullOrEmpty(linkWhitelist)) return FollowBot.Leader;
+
+            var listSplit = linkWhitelist.Split(',');
+            if (listSplit.Length < 1)
+            {
+                GlobalLog.Error(
+                    "--------------------------------------------------------------------------------------------------------------------------------");
+                GlobalLog.Error(" ");
+                GlobalLog.Error(
+                    "[DefenseAndFlaskTask] CastOnParty is selected, but the LinkWhitelist have some problems, pls check the Defensive skill setting.!");
+                GlobalLog.Error(" ");
+                GlobalLog.Error(
+                    "--------------------------------------------------------------------------------------------------------------------------------");
+            }
+
+            var partyMembers = LokiPoe.InstanceInfo.PartyMembers;
+            party = partyMembers.Where(x =>
+                    x != null && x.PlayerEntry != null && listSplit.Contains(x.PlayerEntry.Name) &&
+                    x.PlayerEntry.Name != LokiPoe.Me.Name &&
+                    LokiPoe.InGameState.PartyHud.IsInSameZone(x.PlayerEntry.Name))
+                .ToList();
+            if (party.Count < 1)
+            {
+                GlobalLog.Error(
+                    "--------------------------------------------------------------------------------------------------------------------------------");
+                GlobalLog.Error(" ");
+                GlobalLog.Error(
+                    $"[DefenseAndFlaskTask] CastOnParty is selected, but the LinkWhitelist have some problems (the name in the LinkWithelist do not match the party names [partyMembers = {partyMembers.Count}]), pls check the Defensive skill setting.!");
+                GlobalLog.Error(" ");
+                GlobalLog.Error(
+                    "--------------------------------------------------------------------------------------------------------------------------------");
+            }
+
+            foreach (var partyMember in partyMembers)
+            {
+                var name = partyMember?.PlayerEntry?.Name;
+                if (string.IsNullOrEmpty(name)) continue;
+                if (!LokiPoe.InGameState.PartyHud.IsInSameZone(name)) continue;
+                if (!LinkRotationDictionary.ContainsKey(name)) LinkRotationDictionary.Add(name, 0);
+            }
+
+            var nam = "";
+            var weight = int.MaxValue;
+            var keys = LinkRotationDictionary.Keys;
+            foreach (var key in keys)
+                if (LinkRotationDictionary[key] < weight)
+                {
+                    weight = LinkRotationDictionary[key];
+                    nam = key;
+                }
+
+            //var selected = LinkRotationDictionary.OrderBy(x => x.Value).First();
+            LinkRotationDictionary[nam]++;
+            var p = LokiPoe.ObjectManager.GetObjectsByType<Player>().FirstOrDefault(x => x.Name == nam);
+            return p;
+        }
 
         public static class FlaskNames
         {
@@ -112,203 +300,11 @@ namespace FollowBot.Tasks
             public const string SoulCatcher = "Soul Catcher";
         }
 
-        public async Task<bool> Run()
-        {
-            if (!LokiPoe.IsInGame) return false;
-            if (ShouldTeleport)
-            {
-                ShouldTeleport = false;
-                if (FollowBot._leaderPartyEntry != null && FollowBot._leaderPartyEntry.PlayerEntry != null)
-                {
-                    var leadername = FollowBot._leaderPartyEntry.PlayerEntry.Name;
-                    if (!string.IsNullOrEmpty(leadername))
-                    {
-                        await PartyHelper.FastGotoPartyZone(leadername);
-                    }
-                }
-            }
-            if (ShouldOpenPortal)
-            {
-                if (!World.CurrentArea.IsTown && !World.CurrentArea.IsHideoutArea)
-                {
-                    await PlayerAction.CreateTownPortal();
-                }
-                ShouldOpenPortal = false;
-                return true;
-            }
-            if (LokiPoe.CurrentWorldArea.IsTown) return false;
-            if (LokiPoe.CurrentWorldArea.Id == "HeistHub") return false;
-            if (!LokiPoe.CurrentWorldArea.IsCombatArea) return false;
-
-            if (LokiPoe.Me.HasAura("Grace Period"))
-            {
-                GlobalLog.Debug("[DefenseAndFlaskTask] Find grace period, wait player moves.");
-                return false;
-                //await PlayerAction.MoveAway(15, 20);
-            }
-
-            var hpPct = LokiPoe.Me.HealthPercent;
-            var esPct = LokiPoe.Me.EnergyShieldPercent;
-            var manaPct = LokiPoe.Me.ManaPercent;
-
-            #region Flasks
-            foreach (var flask in FollowBotSettings.Instance.Flasks)
-            {
-                if (!flask.Enabled) continue;
-                var postUseDelay = flask.PostUseDelay.ElapsedMilliseconds;
-                if (postUseDelay < 100) continue;
-                if (postUseDelay < flask.Cooldown) continue;
-                var thisflask = FlaskHud.InventoryControl.Inventory.Items.FirstOrDefault(x => x.LocationTopLeft.X == flask.Slot - 1);
-                if (thisflask == null) continue;
-                if (thisflask.Name == Class.FlaskNames.Quicksilver && LokiPoe.Me.HasAura(QsilverEffect) && !flask.IgnoreEffect) continue;
-                if (!flask.IgnoreEffect && !thisflask.Components.FlaskComponent.IsInstantRecovery && flask.PostUseDelay.ElapsedMilliseconds < thisflask.Components.FlaskComponent.RecoveryTime.TotalMilliseconds) continue;
-                if (!flask.IgnoreEffect && HasFlaskEffect(thisflask)) continue;
-                var threshold = flask.UseEs ? esPct : flask.UseMana ? manaPct : hpPct;
-                if (threshold < flask.Threshold)
-                {
-                    if (UseFlask(thisflask, flask.Slot))
-                    {
-                        flask.PostUseDelay.Restart();
-                        return true;
-                    }
-                }
-            }
-            #endregion
-
-            #region Defense
-            foreach (var skill in FollowBotSettings.Instance.DefensiveSkills)
-            {
-                if (!skill.Enabled) continue;
-                if (!skill.IsReadyToCast) continue;
-                var threshold = skill.UseEs ? esPct : hpPct;
-                if (threshold < skill.Threshold)
-                {
-                    CastDefensiveSkill(skill);
-                }
-            }
-            #endregion
-
-            return false;
-        }
-
-        private bool HasFlaskEffect(Item thisflask)
-        {
-            string name = thisflask.ProperName();
-            string effect = Flasks.GetEffect(name);
-            if (effect == null) return false;
-            return LokiPoe.Me.HasAura(effect);
-        }
-
-        private static void CastDefensiveSkill(DefensiveSkillsClass skillClass)
-        {
-
-
-            if (skillClass == null) return;
-            var skills = LokiPoe.InGameState.SkillBarHud.Skills;
-            if (skills == null) return;
-            Skill skill = skills.FirstOrDefault(s => s.Name == skillClass.Name);
-            if (skill != null && skill.CanUse())
-            {
-                if (skillClass.CastOnLeader)
-                {
-                    var leader = GetNextOnRotation(skillClass.LinkWhitelist);// FollowBot.Leader;
-                    if (leader != null && leader.Distance < 50)
-                    {
-                        LokiPoe.InGameState.SkillBarHud.UseAt(skill.Slot, false, leader.Position, false);
-                        skillClass.Casted();
-                    }
-                }
-                else
-                {
-                    LokiPoe.InGameState.SkillBarHud.Use(skill.Slot, false, false);
-                    skillClass.Casted();
-                }
-            }
-        }
-
-        private static bool UseFlask(Item thisflask, int slot)
-        {
-            if (!thisflask.CanUse) return false;
-            //if (thisflask.Name == FlaskNames.Quicksilver)
-            //{
-            //    if (LokiPoe.Me.HasAura(QsilverEffect)) return false;
-            //}
-            //string name = thisflask.ProperName();
-            //string effect = Flasks.GetEffect(name);
-            //if (effect != null)
-            //{
-            //    if (LokiPoe.Me.HasAura(effect)) return false;
-            //}
-
-            if (!FlaskHud.UseFlaskInSlot(slot)) return false;
-            return true;
-        }
-
-        private static Player GetNextOnRotation(string linkWhitelist)
-        {
-            List<PartyMember> party;
-            if (string.IsNullOrEmpty(linkWhitelist))
-            {
-                return FollowBot.Leader;
-            }
-            else
-            {
-                var listSplit = linkWhitelist.Split(',');
-                if (listSplit.Length < 1)
-                {
-                    GlobalLog.Error("--------------------------------------------------------------------------------------------------------------------------------");
-                    GlobalLog.Error(" ");
-                    GlobalLog.Error("[DefenseAndFlaskTask] CastOnParty is selected, but the LinkWhitelist have some problems, pls check the Defensive skill setting.!");
-                    GlobalLog.Error(" ");
-                    GlobalLog.Error("--------------------------------------------------------------------------------------------------------------------------------");
-                }
-                var partyMembers = LokiPoe.InstanceInfo.PartyMembers;
-                party = partyMembers.Where(x => x != null && x.PlayerEntry != null && listSplit.Contains(x.PlayerEntry.Name) && x.PlayerEntry.Name != LokiPoe.Me.Name && LokiPoe.InGameState.PartyHud.IsInSameZone(x.PlayerEntry.Name)).ToList();
-                if (party.Count < 1)
-                {
-                    GlobalLog.Error("--------------------------------------------------------------------------------------------------------------------------------");
-                    GlobalLog.Error(" ");
-                    GlobalLog.Error($"[DefenseAndFlaskTask] CastOnParty is selected, but the LinkWhitelist have some problems (the name in the LinkWithelist do not match the party names [partyMembers = {partyMembers.Count}]), pls check the Defensive skill setting.!");
-                    GlobalLog.Error(" ");
-                    GlobalLog.Error("--------------------------------------------------------------------------------------------------------------------------------");
-                }
-                foreach (var partyMember in partyMembers)
-                {
-                    var name = partyMember?.PlayerEntry?.Name;
-                    if (string.IsNullOrEmpty(name)) continue;
-                    if (!LokiPoe.InGameState.PartyHud.IsInSameZone(name)) continue;
-                    if (!LinkRotationDictionary.ContainsKey(name))
-                    {
-                        LinkRotationDictionary.Add(name, 0);
-                    }
-                }
-                var nam = "";
-                int weight = int.MaxValue;
-                var keys = LinkRotationDictionary.Keys;
-                foreach (var key in keys)
-                {
-                    if (LinkRotationDictionary[key] < weight)
-                    {
-                        weight = LinkRotationDictionary[key];
-                        nam = key;
-                    }
-                }
-                //var selected = LinkRotationDictionary.OrderBy(x => x.Value).First();
-                LinkRotationDictionary[nam]++;
-                var p = LokiPoe.ObjectManager.GetObjectsByType<Player>().FirstOrDefault(x => x.Name == nam);
-                return p;
-            }
-
-        }
-
         #region Unused interface methods
 
         public MessageResult Message(Message message)
         {
-            if (message.Id == Events.Messages.AreaChanged)
-            {
-                LinkRotationDictionary.Clear();
-            }
+            if (message.Id == Events.Messages.AreaChanged) LinkRotationDictionary.Clear();
             return MessageResult.Unprocessed;
         }
 
@@ -319,7 +315,6 @@ namespace FollowBot.Tasks
 
         public void Start()
         {
-
         }
 
         public void Tick()
@@ -338,4 +333,3 @@ namespace FollowBot.Tasks
         #endregion
     }
 }
-
