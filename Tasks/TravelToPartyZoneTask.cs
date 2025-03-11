@@ -122,7 +122,7 @@ namespace FollowBot.Tasks
             {
                 if (!await TakePortal())
                 {
-                    if (!await TakeFirstTransition()) return false;
+                    if (!await TakeCloseFirstTransition()) return false;
                     await Coroutines.ReactionWait();
                     return true;
                 }
@@ -199,7 +199,7 @@ namespace FollowBot.Tasks
 
             if (curZone.IsMap && leaderArea.IsCombatArea)
             {
-                if (!await TakeFirstTransition()) return false;
+                if (!await TakeCloseFirstTransition()) return false;
                 await Coroutines.ReactionWait();
                 return true;
             }
@@ -231,7 +231,7 @@ namespace FollowBot.Tasks
         }
 
 
-        private static async Task<bool> TakeFirstTransition()
+        private static async Task<bool> TakeCloseFirstTransition()
         {
             var leader =
                 LokiPoe.InstanceInfo.PartyMembers.FirstOrDefault(x => x.MemberStatus == PartyStatus.PartyLeader);
