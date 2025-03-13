@@ -123,15 +123,15 @@ namespace FollowBot.Tasks
 
         private async Task WaitForTransparentItems()
         {
-            var allItems = _tradeControl.InventoryControl_OtherOffer.Inventory.Items;
-            var transparentItems = allItems.Where(
-                item => _tradeControl.InventoryControl_OtherOffer.IsItemTransparent(item.LocalId)).ToList();
+            var items = _tradeControl.InventoryControl_OtherOffer.Inventory.Items;
+            var transparentItems = items.Where(
+                item => _tradeControl.InventoryControl_OtherOffer.IsItemTransparent(item.LocalId)).Select(item => item.LocalId).ToList();
 
             if (transparentItems.Count == 0) return;
 
             Log.DebugFormat($"[TradeTask] Find {transparentItems.Count()} transparent items.");
 
-            foreach (var itemId in transparentItems.Select(item => item.LocalId))
+            foreach (var itemId in transparentItems)
             {
                 _tradeControl.InventoryControl_OtherOffer.ViewItemsInInventory(
                     (_, invenoryItem) => invenoryItem.LocalId == itemId, () => TradeUi.IsOpened);
