@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using DreamPoeBot.Loki.Bot;
 using DreamPoeBot.Loki.Common;
@@ -13,6 +14,13 @@ namespace FollowBot.Tasks
 {
     internal class TradeTask : ITask
     {
+        private static readonly List<string> CanUseFastMoveAllClassList = new List<string>
+        {
+            "MapFragment",
+            "StackableCurrency",
+            "DivinationCard"
+        };
+
         private TradeControlWrapper _tradeControl;
 
         public async Task<bool> Run()
@@ -65,7 +73,6 @@ namespace FollowBot.Tasks
                 if (!await ProcessGiveItem())
                 {
                     Log.DebugFormat("[TradeTask] HandleGiveItem is false");
-                    CancelTrade();
                     await Coroutines.CloseBlockingWindows();
                     return false;
                 }
@@ -82,7 +89,7 @@ namespace FollowBot.Tasks
             var waitResult = false;
 
             if (buttonPressResult)
-                waitResult = await Wait.For(() => !TradeUi.IsOpened, "Closed trade", 100, 5000);
+                waitResult = await Wait.For(() => !TradeUi.IsOpened, "Closed trade", 100, 15000);
 
 
             await Coroutines.CloseBlockingWindows();
@@ -95,22 +102,52 @@ namespace FollowBot.Tasks
                 .OrderByDescending(x => x.Size.Y).ToList();
             Log.DebugFormat($"[TradeTask] Main Inventory Items: {inventoryItems.Count}");
 
-            foreach (var item in inventoryItems)
-                if (!await TryMoveItemToTrade(item))
+            var noCurItems = inventoryItems.Where(x => !CanUseFastMoveAllClassList.Contains(x.Class)).ToList();
+
+            Log.DebugFormat("[{0}] Main Inventory Items has: [{1}] cannot use FastMoveAll items", Name,
+                noCurItems.Count);
+
+            if (noCurItems.Count != 0)
+                foreach (var item in noCurItems)
+                {
+                    if (!await TryMoveItemToTrade(item))
+                        return false;
+                }
+
+            var curItems = inventoryItems.Where(x => CanUseFastMoveAllClassList.Contains(x.Class))
+                .GroupBy(x => x.FullName)
+                .Select(x => x.First()).ToList();
+
+            Log.DebugFormat("[{0}] Main Inventory Items has: [{1}] can use FastMoveALl items", Name, curItems.Count);
+            if (curItems.Count == 0) return true;
+
+            foreach (var item in curItems)
+            {
+                if (!await TryMoveItemToTrade(item, true))
                     return false;
+            }
 
             return true;
         }
 
 
-        private async Task<bool> TryMoveItemToTrade(Item item, int attempts = 3)
+        private async Task<bool> TryMoveItemToTrade(Item item, bool fastMoveAll = false, int attempts = 3)
         {
             for (var i = 0; i <= attempts; i++)
             {
-                InventoryUi.InventoryControl_Main.FastMove(item.LocalId);
+                Log.DebugFormat("[{0}] TryMoveItemToTrade  item = [{1}] id = [{2}]. Attempts: {3}/{4}", Name, item.Name,
+                    item.Id, i, attempts);
+                if (fastMoveAll)
+                    InventoryUi.InventoryControl_Main.FastMoveAll(item.LocalId);
+                else
+                    InventoryUi.InventoryControl_Main.FastMove(item.LocalId);
+
                 var waitResult = await Wait.For(() =>
                     {
+                        _tradeControl = TradeUi.TradeControl;
                         var yourOfferInventoryItems = _tradeControl.InventoryControl_YourOffer.Inventory.Items;
+                        if (fastMoveAll)
+                            return yourOfferInventoryItems.Any(x => string.Equals(x.FullName, item.FullName));
                         return yourOfferInventoryItems.Any(x => x.Id == item.Id);
                     }, $"Try move item to trade. Attempt: {i}/{attempts}", 100, 500);
 
@@ -125,7 +162,8 @@ namespace FollowBot.Tasks
         {
             var items = _tradeControl.InventoryControl_OtherOffer.Inventory.Items;
             var transparentItems = items.Where(
-                item => _tradeControl.InventoryControl_OtherOffer.IsItemTransparent(item.LocalId)).Select(item => item.LocalId).ToList();
+                    item => _tradeControl.InventoryControl_OtherOffer.IsItemTransparent(item.LocalId))
+                .Select(item => item.LocalId).ToList();
 
             if (transparentItems.Count == 0) return;
 
@@ -152,6 +190,7 @@ namespace FollowBot.Tasks
                 if (string.IsNullOrEmpty(_tradeControl.ConfirmLabelText) && _tradeControl.OtherAcceptedTheOffert)
                     Log.DebugFormat($"{Name} Unable to accept trade because: [{_tradeControl.ConfirmLabelText}]");
             }
+
             return false;
         }
 
@@ -201,7 +240,7 @@ namespace FollowBot.Tasks
             var tradeResult = tradeControl.Cancel();
             if (tradeResult != TradeResult.None)
             {
-                Log.DebugFormat($"[TradeTask] Result trade: {tradeResult}");
+                Log.DebugFormat($"[TradeTask] Cancel trade result: {tradeResult}");
                 return;
             }
 
